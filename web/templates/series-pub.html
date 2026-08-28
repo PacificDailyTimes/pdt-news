@@ -1,0 +1,12 @@
+{{template "head" .}}
+<h1>{{.Data.Name}}</h1>
+<p class="kicker"><a href="/series/{{.Data.Slug}}/rss">RSS</a> · <a href="/series/{{.Data.Slug}}/atom">Atom</a> · <a href="/series/{{.Data.Slug}}/feed">Feed</a></p>
+<div class="deck">
+{{range .Data.Pieces}}
+<article class="card">
+  <h2><a href="/p/{{.Slug}}">{{.Title}}</a></h2>
+  <p>{{.Excerpt}}</p>
+</article>
+{{end}}
+</div>
+{{template "foot" .}}

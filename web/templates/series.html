@@ -1,0 +1,13 @@
+{{template "head" .}}
+<div class="dash">
+<nav class="tabs"><a href="/dash">Home</a><a href="/dash/series">Series</a></nav>
+<h1>Series</h1>
+<p class="hint">501 taxonomy. Each series has /series/slug, /series/slug/rss, /atom, /feed.</p>
+<form method="post">
+<p><label>Name <input name="name" required></label> <label>iTunes category <input name="itunes_cat"></label></p>
+<p><textarea name="descr" placeholder="Description"></textarea></p>
+<p><button class="btn">Add</button></p>
+</form>
+<ul class="plain">{{range .Data}}<li><a href="/series/{{.Slug}}">{{.Name}}</a> · <a href="/series/{{.Slug}}/rss">rss</a></li>{{end}}</ul>
+</div>
+{{template "foot" .}}

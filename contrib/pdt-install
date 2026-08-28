@@ -1,0 +1,81 @@
+#!/bin/bash
+# Package / tarball installer. Passwordless by default.
+#   sudo bash contrib/pdt-install
+#   sudo bash contrib/pdt-install --db-name pdt --db-user pdt --db-pass secret --url https://example.tld
+set -euo pipefail
+DB_NAME=pdt
+DB_USER=pdt
+DB_PASS=
+DB_HOST=127.0.0.1
+WEB_URL=https://localhost
+MODE=single
+NGINX_NAME=
+NGINX_LISTEN=80
+WEBROOT=/srv/www/pdt
+ETC=/etc/pdt
+PASSWORDLESS=1
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --db-name) DB_NAME=$2; shift 2;;
+    --db-user) DB_USER=$2; shift 2;;
+    --db-pass) DB_PASS=$2; shift 2;;
+    --db-host) DB_HOST=$2; shift 2;;
+    --url) WEB_URL=$2; shift 2;;
+    --mode) MODE=$2; shift 2;;
+    --webroot) WEBROOT=$2; shift 2;;
+    --nginx-server-name) NGINX_NAME=$2; shift 2;;
+    --nginx-listen) NGINX_LISTEN=$2; shift 2;;
+    --interactive) PASSWORDLESS=1; shift; 
+      read -rp "Database name [$DB_NAME]: " x; DB_NAME=${x:-$DB_NAME}
+      read -rp "Database user [$DB_USER]: " x; DB_USER=${x:-$DB_USER}
+      read -rsp "Database password: " DB_PASS; echo
+      read -rp "Public URL [$WEB_URL]: " x; WEB_URL=${x:-$WEB_URL}
+      read -rp "mode single|multi [$MODE]: " x; MODE=${x:-$MODE}
+      read -rp "Nginx server_name (empty skip): " NGINX_NAME
+      ;;
+    *) echo "unknown $1"; exit 1;;
+  esac
+done
+
+mkdir -p "$WEBROOT" "$ETC/wallet" /var/lib/pdt
+chmod 0700 "$ETC/wallet"
+
+if [ ! -f "$ETC/config" ]; then
+  cat > "$ETC/config" <<EOF
+web_bind=127.0.0.1
+web_port=9001
+web_url=$WEB_URL
+db_host=$DB_HOST
+db_port=5432
+db_name=$DB_NAME
+db_user=$DB_USER
+db_pass=$DB_PASS
+mode=$MODE
+mail_transport=off
+theme=masthead
+wallet_dir=/etc/pdt/wallet
+# setup_password=
+# setup_password_hash=
+EOF
+  chmod 0640 "$ETC/config"
+fi
+
+ln -sfn "$ETC/config" "$WEBROOT/config"
+
+if command -v psql >/dev/null && [ -n "$DB_PASS" ]; then
+  su - postgres -c "psql -c \"CREATE USER $DB_USER WITH PASSWORD '$DB_PASS';\"" 2>/dev/null || true
+  su - postgres -c "psql -c \"CREATE DATABASE $DB_NAME OWNER $DB_USER;\"" 2>/dev/null || true
+fi
+
+if [ -n "$NGINX_NAME" ]; then
+  conf=/etc/nginx/http.d/pdt.conf
+  [ -d /etc/nginx/sites-available ] && conf=/etc/nginx/sites-available/pdt
+  sed -e "s/example.tld/$NGINX_NAME/g" -e "s/listen 80/listen $NGINX_LISTEN/" \
+    "$(dirname "$0")/nginx/pdt.conf" > "$conf"
+  [ -d /etc/nginx/sites-enabled ] && ln -sfn "$conf" /etc/nginx/sites-enabled/pdt
+  nginx -t && systemctl reload nginx || true
+fi
+
+echo "Config: $ETC/config"
+echo "Open $WEB_URL/install  (passwordless unless you set setup_password)"

@@ -1,0 +1,13 @@
+{{template "head" .}}
+<div class="dash">
+<nav class="tabs"><a href="/dash">Home</a><a href="/dash/bio">Bio</a></nav>
+<h1>Bio</h1>
+<p class="hint">Handle is public as /@handle and /handle. Login ID stays private.</p>
+<form method="post">
+<p><label>Name <input name="name" value="{{.Data.Name}}"></label></p>
+{{if .Multi}}<p><label>Public handle <input name="handle" value="{{.Data.PublicHandle}}"></label></p>{{end}}
+<p><label>Bio<br><textarea name="bio" rows="8">{{.Data.Bio}}</textarea></label></p>
+<p><button class="btn">Save</button></p>
+</form>
+</div>
+{{template "foot" .}}

@@ -1,0 +1,12 @@
+{{template "head" .}}
+<div class="dash">
+<nav class="tabs"><a href="/dash">Home</a><a href="/dash/feeds">Aggregator</a></nav>
+<h1>RSS importer</h1>
+<form method="post">
+<p><label>Name <input name="name" required></label> <label>Source URL <input name="source" required></label>
+<label>Minutes <input name="interval" value="15" size="4"></label></p>
+<p><button class="btn">Add feed</button></p>
+</form>
+<ul class="plain">{{range .Data}}<li>{{.Name}} · {{.Status}}<br><code>{{.Source}}</code></li>{{end}}</ul>
+</div>
+{{template "foot" .}}

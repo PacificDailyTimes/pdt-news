@@ -1,0 +1,16 @@
+{{template "head" .}}
+<div class="dash">
+<nav class="tabs"><a href="/dash">Home</a><a href="/dash/security">Security</a></nav>
+<h1>Security</h1>
+<p>Login ID: <code>{{.Data.User.LoginID}}</code></p>
+{{if .Data.User.TOTPOn}}<p class="flash">Authenticator on.</p>
+{{else if .Data.URI}}
+<p>Add this to your app, then confirm a code:</p>
+<p><code>{{.Data.URI}}</code></p>
+<form method="post"><input name="code" inputmode="numeric"> <button class="btn" name="totp_confirm" value="1">Confirm</button></form>
+{{else}}
+<form method="post"><button class="btn" name="totp_start" value="1">Set up authenticator</button></form>
+{{end}}
+<p class="hint">Email link is always available. Passkeys can be added in a later cut; TOTP ships now.</p>
+</div>
+{{template "foot" .}}

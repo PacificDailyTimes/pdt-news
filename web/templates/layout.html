@@ -1,0 +1,33 @@
+{{define "head"}}<!DOCTYPE html>
+<html lang="en" data-theme="{{.Theme}}" data-mode="white">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{if .Title}}{{.Title}} · {{end}}{{if .Site}}{{index .Site "name"}}{{else}}pdt-news{{end}}</title>
+<link rel="stylesheet" href="/static/css/pdt.css">
+<link rel="alternate" type="application/rss+xml" href="/rss">
+</head>
+<body class="theme-{{.Theme}}">
+<a class="skip" href="#content">Skip to content</a>
+<header class="mast">
+  <div class="mast-inner">
+    <a class="mark" href="/">{{if .Site}}{{index .Site "name"}}{{else}}pdt-news{{end}}</a>
+    {{if .Site}}{{if index .Site "tagline"}}<p class="kick">{{index .Site "tagline"}}</p>{{end}}{{end}}
+    <nav>
+      <a href="/">Front</a>
+      <a href="/shop">Shop</a>
+      <a href="/rss">RSS</a>
+      {{if .User}}<a href="/dash">Dash</a><a href="/logout">Out</a>
+      {{else}}<a href="/login">Sign in</a>{{end}}
+    </nav>
+  </div>
+</header>
+<div id="content" class="wrap">
+{{end}}
+{{define "foot"}}
+</div>
+<button type="button" class="aa" id="readerBtn" title="Reader">Aa</button>
+<div id="readerDock" class="dock" hidden></div>
+<script src="/static/js/reader.js"></script>
+</body></html>
+{{end}}

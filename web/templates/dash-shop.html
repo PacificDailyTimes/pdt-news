@@ -1,0 +1,22 @@
+{{template "head" .}}
+<div class="dash">
+<nav class="tabs"><a href="/dash">Home</a><a href="/dash/shop">Products</a></nav>
+<h1>Products</h1>
+<form method="post">
+<p><label>Title <input name="title" required></label> <label>Price USD <input name="price" value="0"></label></p>
+<p><label>Kind <select name="kind">
+<option value="physical">physical</option>
+<option value="virtual">virtual</option>
+<option value="subscription">subscription (ship or access on a beat)</option>
+</select></label></p>
+<p><label>Every <input name="interval_n" value="1" size="3">
+<select name="interval_unit"><option>day</option><option>week</option><option selected>month</option><option>year</option></select></label>
+<label><input type="checkbox" name="ship" value="1"> ships</label></p>
+<p><label>Virtual URL <input name="virtual_url"></label></p>
+<p><textarea name="body" placeholder="Description"></textarea></p>
+<p class="hint">Subscription: buyer picks a start date and an optional skip-until. Next ship is start, then every N units. No 12-field Woo maze.</p>
+<p><button class="btn">Save product</button></p>
+</form>
+<ul class="plain">{{range .Data}}<li>{{.Title}} · ${{.Price}} · {{.Kind}}</li>{{end}}</ul>
+</div>
+{{template "foot" .}}

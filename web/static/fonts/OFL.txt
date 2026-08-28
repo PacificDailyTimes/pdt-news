@@ -1,0 +1,8 @@
+These Latin woff2 files are subsets of:
+
+- Newsreader (Production Type) — SIL Open Font License 1.1
+- Source Serif 4 (Adobe) — SIL Open Font License 1.1
+- Source Sans 3 (Adobe) — SIL Open Font License 1.1
+
+Vendored from Fontsource builds so the CMS redistributes them under OFL
+without a runtime CDN. Full OFL text: https://openfontlicense.org/

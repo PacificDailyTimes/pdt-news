@@ -1,0 +1,17 @@
+{{template "head" .}}
+<article class="thread">
+<aside class="meta">
+  <p class="kicker">author</p>
+  <p class="who">{{.Data.Name}}</p>
+  {{if .Data.PublicHandle}}<p>@{{.Data.PublicHandle}}</p>
+  <p><a href="/{{.Data.PublicHandle}}">blog</a></p>{{end}}
+</aside>
+<div class="post">
+  <h1>{{.Data.Name}}</h1>
+  <div class="prose">{{.Data.Bio}}</div>
+  {{if .User}}{{if eq .User.Role "consumer"}}
+  <form method="post" action="/dash"><p class="hint">Follow from your dash after we wire the button — for now open their blog.</p></form>
+  {{end}}{{end}}
+</div>
+</article>
+{{template "foot" .}}

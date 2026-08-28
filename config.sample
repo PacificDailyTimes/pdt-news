@@ -1,0 +1,74 @@
+# pdt-news SysAdmin config
+# Package install: live file is /etc/pdt/config (symlinked from /srv/www/pdt/config or /var/www/pdt/config).
+# Tarball: copy this next to the binary as "config", or set PDT_CONFIG.
+# Nothing in this file is served over HTTP.
+
+# --- bind ---
+# Examples (uncomment ONE web_url):
+# web_url=https://example.tld
+# web_url=https://news.example.tld
+# web_url=https://example.tld/news
+# web_url=https://192.0.2.10:9001
+# web_url=https://[2001:db8::10]:9001
+web_bind=127.0.0.1
+web_port=9001
+web_url=https://localhost
+
+# --- postgres ---
+db_host=127.0.0.1
+db_port=5432
+db_name=pdt
+db_user=pdt
+db_pass=change-me
+
+# --- mode ---
+# single  = one blog at the host. No @handle, no /handle.
+# multi   = paper at host; /@handle bio; /handle author blog. Path only (subdomain later).
+mode=single
+
+# --- installer lock ---
+# Passwordless install is the default (no line needed).
+# Optional plain-text lock; anyone hitting /install must know it.
+# setup_password=change-me
+# If you prefer a hash instead of plaintext, comment the line above and set:
+# setup_password_hash=  (sha256 hex of the password; generate: printf %s 'secret' | sha256sum)
+
+# --- mail (SysAdmin) ---
+mail_transport=mail
+# mail_transport=smtp
+# mail_transport=off
+mail_from=noreply@localhost
+mail_from_name=pdt-news
+# smtp_host=127.0.0.1
+# smtp_port=587
+# smtp_user=
+# smtp_pass=
+# smtp_secure=tls
+
+# --- payments (also editable in the admin dash; env/config wins if set) ---
+# stripe_secret=
+# stripe_publishable=
+# paypal_client_id=
+# paypal_secret=
+
+# --- crypto keys live ONLY under /etc/pdt/wallet/ (mode 0700, files 0600).
+# Tarball installs: the SysAdmin creates that directory on the FHS even if the app itself lives in a folder.
+# wallet_dir=/etc/pdt/wallet
+# Each coin is ticker=address and optional ticker_key=/etc/pdt/wallet/TICKER.key (WIF, hex, or mnemonic line).
+# Coins we know how to display (add more as ticker=address):
+# btc=
+# eth=
+# sol=
+# xrp=
+# xlm=
+# avax=
+# hbar=
+# usdt=
+# usdc=
+# shib=
+# lunc=
+# volt=
+# pepe=
+
+# --- theme default ---
+theme=masthead

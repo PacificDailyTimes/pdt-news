@@ -1,0 +1,17 @@
+{{template "head" .}}
+<section class="rail">
+  <h1 class="kicker">The paper</h1>
+  <div class="deck">
+  {{range .Data}}
+    <article class="card">
+      {{if .Series}}<p class="kicker"><a href="/series/{{.SeriesSlug}}">{{.Series}}</a></p>{{end}}
+      <h2><a href="/p/{{.Slug}}">{{.Title}}</a></h2>
+      <p class="by">{{.Name}}{{if .Handle}} · <a href="/@{{.Handle}}">@{{.Handle}}</a>{{end}}</p>
+      <p>{{.Excerpt}}</p>
+    </article>
+  {{else}}
+    <p class="lede">Nothing live yet.</p>
+  {{end}}
+  </div>
+</section>
+{{template "foot" .}}

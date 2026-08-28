@@ -1,0 +1,20 @@
+{{template "head" .}}
+<div class="slim">
+<h1>Sign in</h1>
+<p class="hint">Use your <b>login ID</b> — it is never a public URL. Or request a code-and-link by email.</p>
+{{if .Err}}<p class="flash bad">{{.Err}}</p>{{end}}
+{{if .Flash}}<p class="flash">{{.Flash}}</p>{{end}}
+<form method="post">
+<p><label>Login ID <input name="login_id" autocomplete="username"></label></p>
+<p><label>Password <input type="password" name="password" autocomplete="current-password"></label></p>
+<p><label>Authenticator <input name="totp" inputmode="numeric" autocomplete="one-time-code"></label></p>
+<p><button class="btn" name="password_login" value="1">Sign in</button></p>
+</form>
+<hr>
+<form method="post">
+<input type="hidden" name="magic" value="1">
+<p><label>Email <input type="email" name="email"></label></p>
+<p><button class="btn ghost">Email me a link</button></p>
+</form>
+</div>
+{{template "foot" .}}

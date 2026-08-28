@@ -1,0 +1,25 @@
+{{template "head" .}}
+<article class="thread" data-url="{{.URL}}/p/{{index .Data "Slug"}}">
+  <aside class="meta">
+    <p class="kicker">{{index .Data "Series"}}</p>
+    <p class="who">{{index .Data "Name"}}</p>
+    {{if index .Data "Handle"}}<p><a href="/@{{index .Data "Handle"}}">@{{index .Data "Handle"}}</a></p>
+    <p><a href="/{{index .Data "Handle"}}">blog</a></p>{{end}}
+    <p class="when">{{index .Data "When"}}</p>
+  </aside>
+  <div class="post">
+    <h1>{{index .Data "Title"}}</h1>
+    {{if eq (index .Data "FeatPlace") "top"}}
+      {{if index .Data "FeatImg"}}<p class="feat"><img src="{{index .Data "FeatImg"}}" alt=""></p>{{end}}
+      {{if index .Data "FeatAud"}}<p class="feat"><audio controls src="{{index .Data "FeatAud"}}"></audio></p>{{end}}
+      {{if index .Data "FeatVid"}}<p class="feat"><video controls src="{{index .Data "FeatVid"}}"></video></p>{{end}}
+    {{end}}
+    <div class="prose" id="prose">{{index .Data "Content"}}</div>
+    {{if eq (index .Data "FeatPlace") "bottom"}}
+      {{if index .Data "FeatImg"}}<p class="feat"><img src="{{index .Data "FeatImg"}}" alt=""></p>{{end}}
+      {{if index .Data "FeatAud"}}<p class="feat"><audio controls src="{{index .Data "FeatAud"}}"></audio></p>{{end}}
+      {{if index .Data "FeatVid"}}<p class="feat"><video controls src="{{index .Data "FeatVid"}}"></video></p>{{end}}
+    {{end}}
+  </div>
+</article>
+{{template "foot" .}}

@@ -1,0 +1,12 @@
+{{template "head" .}}
+<h1>{{.Data.Author.Name}}</h1>
+<p class="lede"><a href="/@{{.Data.Author.PublicHandle}}">bio</a></p>
+<div class="deck">
+{{range .Data.Pieces}}
+<article class="card">
+  <h2><a href="/p/{{.Slug}}">{{.Title}}</a></h2>
+  <p>{{.Excerpt}}</p>
+</article>
+{{end}}
+</div>
+{{template "foot" .}}

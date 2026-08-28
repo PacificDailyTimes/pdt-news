@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en" data-mode="white"><head>
+<meta charset="utf-8"><title>Install pdt-news</title>
+<link rel="stylesheet" href="/static/css/pdt.css">
+</head><body class="theme-masthead">
+<div class="wrap slim">
+<h1>Install pdt-news</h1>
+<p class="lede">Passwordless by default. PostgreSQL over TCP (<code>127.0.0.1</code>).</p>
+{{if .Err}}<p class="flash bad">{{.Err}}</p>{{end}}
+<form method="post">
+{{if .NeedPass}}<p><label>Setup password <input type="password" name="setup_password"></label></p>{{end}}
+<h2>Site</h2>
+<p><label>Public URL <input name="web_url" placeholder="https://example.tld" required></label></p>
+<p><label>Name <input name="site_name" value="pdt-news"></label>
+<label>Tagline <input name="tagline"></label></p>
+<p><label>Mode
+<select name="mode">
+<option value="single">single author</option>
+<option value="multi">multiauthor (path: /@handle bio, /handle blog)</option>
+</select></label></p>
+<h2>PostgreSQL</h2>
+<p><label>Host <input name="db_host" value="127.0.0.1"></label>
+<label>Port <input name="db_port" value="5432"></label></p>
+<p><label>Database <input name="db_name" required></label>
+<label>User <input name="db_user" required></label>
+<label>Password <input type="password" name="db_pass"></label></p>
+<h2>First admin</h2>
+<p class="hint">Login ID never appears in public. Authors get a separate handle later.</p>
+<p><label>Login ID <input name="login_id" required></label>
+<label>Email <input type="email" name="email" required></label>
+<label>Name <input name="name"></label></p>
+<p><label>Password (optional) <input type="password" name="password"></label></p>
+<p><button class="btn">Install</button></p>
+</form>
+</div>
+</body></html>

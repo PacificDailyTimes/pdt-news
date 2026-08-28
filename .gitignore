@@ -1,0 +1,5 @@
+/pdt
+/var/
+/config
+*.key
+.env

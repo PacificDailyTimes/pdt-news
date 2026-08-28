@@ -1,0 +1,15 @@
+[Unit]
+Description=pdt-news CMS
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www
+Group=www
+WorkingDirectory=/srv/www/pdt
+ExecStart=/usr/bin/pdt
+Restart=on-failure
+Environment=PDT_CONFIG=/etc/pdt/config
+
+[Install]
+WantedBy=multi-user.target

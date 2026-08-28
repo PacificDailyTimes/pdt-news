@@ -1,0 +1,13 @@
+{{template "head" .}}
+<div class="dash">
+<nav class="tabs"><a href="/dash">Home</a><a href="/dash/wallet">Wallet</a></nav>
+<h1>Wallet</h1>
+<p class="hint">Keys never leave <code>/etc/pdt/wallet/</code> (mode 0700). Put <code>btc.key</code>, <code>eth.key</code>, … there. Addresses in config. Tarball installs still use that FHS path.</p>
+<table class="grid">
+<tr><th>Coin</th><th>Address</th><th>Key on disk</th><th>Balance</th></tr>
+{{range .Data}}
+<tr><td>{{.Ticker}}</td><td><code>{{.Address}}</code></td><td>{{if .HasKey}}yes{{else}}no{{end}}</td><td>{{.Balance}} {{if .Err}}<span class="bad">{{.Err}}</span>{{end}}</td></tr>
+{{end}}
+</table>
+</div>
+{{template "foot" .}}
