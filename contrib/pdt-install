@@ -3,7 +3,8 @@
 # Passwordless by default (no setup_password).
 #
 # Destination is --webroot (or the commented default). Interactive does not ask for it.
-# Verb: --webroot /srv/www/vapps/pdtnews.DOMAIN --config /opt/verb/conf/vapps/pdtnews.DOMAIN.config --nginx-server-name DOMAIN
+# Verb: --webroot /srv/www/vapps/pdt.DOMAIN --config /opt/verb/conf/vapps/pdt.DOMAIN.config --nginx-server-name DOMAIN
+# Machine name is pdt.DOMAIN. BIMI is at /bimi.svg.
 #
 #   sudo bash pdt-install
 #   sudo bash pdt-install --db-name pdt --db-user pdt --db-pass secret --url https://example.tld --mode network
@@ -41,7 +42,8 @@ while [ $# -gt 0 ]; do
     -h|--help)
       echo "pdt-install [--webroot DIR] [--etc DIR] [--config FILE] [--db-name N] [--db-user U] [--db-pass P] [--url URL] [--mode single|network] [--nginx-server-name HOST] [--interactive]"
       echo "  --webroot is a flag/default only. Interactive will not prompt for it."
-      echo "  Verb example: pdt-install --webroot /srv/www/vapps/pdtnews.inkisaverb.com --nginx-server-name inkisaverb.com --url https://inkisaverb.com"
+      echo "  Verb example: pdt-install --webroot /srv/www/vapps/pdt.inkisaverb.com --nginx-server-name inkisaverb.com --url https://inkisaverb.com"
+      echo "  Machine name is pdt.DOMAIN (not the public host). BIMI is at /bimi.svg."
       exit 0;;
     *) echo "unknown $1"; exit 1;;
   esac
@@ -92,7 +94,7 @@ theme=masthead
 wallet_dir=$ETC/wallet
 # webroot=$WEBROOT
 # Verb destination example:
-#   --webroot /srv/www/vapps/pdtnews.example.tld
+#   --webroot /srv/www/vapps/pdt.example.tld
 # setup_password=
 # setup_password_hash=
 EOF

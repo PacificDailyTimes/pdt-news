@@ -101,3 +101,5 @@ go build -o pdt ./cmd/pdt
 ```
 
 Packages: [pdt-news-package](https://github.com/PacificDailyTimes/pdt-news-package) (Arch/Debian/RPM). Config: `/etc/pdt/config`, symlinked from `/srv/www/pdt/config`. Nginx: `contrib/nginx/pdt.conf`. Installer: `contrib/pdt-install` (`--webroot` sets destination; interactive does not ask for it).
+
+On Verb the machine name is `vapps/pdt.DOMAIN.TLD`; the public host is the domain itself. BIMI is served at `https://domain.tld/bimi.svg`.

@@ -121,11 +121,24 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/rss", s.feed("rss"))
 	s.mux.HandleFunc("/atom", s.feed("atom"))
 	s.mux.HandleFunc("/feed", s.feed("rss"))
+	s.mux.HandleFunc("/bimi.svg", s.bimi)
 	s.mux.HandleFunc("/", s.pub)
 }
 
 func (s *Server) static() http.Handler {
 	return http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(s.root, "web/static"))))
+}
+
+func (s *Server) bimi(w http.ResponseWriter, r *http.Request) {
+	for _, p := range []string{filepath.Join(s.root, "web/static/bimi.svg"), filepath.Join(s.root, "bimi.svg")} {
+		b, err := os.ReadFile(p)
+		if err == nil {
+			w.Header().Set("Content-Type", "image/svg+xml")
+			_, _ = w.Write(b)
+			return
+		}
+	}
+	http.NotFound(w, r)
 }
 
 func tok(n int) string {
