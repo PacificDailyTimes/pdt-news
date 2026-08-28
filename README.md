@@ -17,7 +17,12 @@ One compose family, one shop family, one site family — not pages over here and
 
 Subdomain author blogs wait on inkcert.
 
+## inkMail (enterprise)
+
+On a Verber, `ink install inkmail` is the postfix-maddy agnostic mail panel. For a pdt site, set `domain_lock=` to the paper domain in `inkmail.conf` so every subdomain of that paper gets an inbox or alias when created. BIMI is `https://domain.tld/bimi.svg` via `ink set bimi`.
+
 ## People
+
 
 - **Admin** — paper, site look, SEO, menus, wallet, aggregator, shop
 - **Author** — compose, bio, media. Public **handle** only if they want one
