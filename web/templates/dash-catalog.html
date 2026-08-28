@@ -1,0 +1,15 @@
+{{template "head" .}}
+<div class="dash">
+<nav class="tabs"><a href="/dash">Home</a><a href="/dash/shop">Products</a><a href="/dash/catalog">Indexes</a></nav>
+<h1>Product indexes</h1>
+<p class="hint">An index lists products and/or departments. Public: <code>/shop/i/{slug}</code>.</p>
+<form method="post">
+<p><label>Name <input name="name" required></label> <label>Min tier <input name="min_tier" value="0" size="3"></label></p>
+<p><textarea name="body" placeholder="Intro"></textarea></p>
+<p>Products {{range .Data.Products}}<label><input type="checkbox" name="product_id" value="{{.ID}}"> {{.Title}}</label> {{end}}</p>
+<p>Departments {{range .Data.Depts}}<label><input type="checkbox" name="department_id" value="{{.ID}}"> {{.Name}}</label> {{end}}</p>
+<p><button class="btn">Save index</button></p>
+</form>
+<ul class="plain">{{range .Data.List}}<li>{{.Name}} · /shop/i/{{.Slug}}</li>{{end}}</ul>
+</div>
+{{template "foot" .}}

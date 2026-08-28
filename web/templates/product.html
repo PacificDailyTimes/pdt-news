@@ -1,0 +1,30 @@
+{{template "head" .}}
+<article class="product">
+  <p class="kicker">{{index .Data "Kind"}}</p>
+  <h1>{{index .Data "Title"}}</h1>
+  <p class="price">${{index .Data "Price"}}</p>
+  <div class="prose">{{index .Data "Body"}}</div>
+  <form method="post" action="/cart" id="buy">
+    <input type="hidden" name="act" value="add">
+    <input type="hidden" name="product_id" value="{{index .Data "ID"}}">
+    <div class="features">
+    {{range index .Data "Features"}}
+      <fieldset class="feat-{{index . "input"}}">
+        <legend>{{index . "name"}}</legend>
+        {{if eq (index . "input") "select"}}
+          <select name="opt">{{range index . "options"}}<option {{if not (index . "ok")}}disabled{{end}}>{{index . "v"}}</option>{{end}}</select>
+        {{else}}
+          <div class="swatches">
+          {{range index . "options"}}
+            <label class="swatch {{if not (index . "ok")}}off{{end}}"><input type="radio" name="opt" value="{{index . "v"}}" {{if not (index . "ok")}}disabled{{end}}> <span>{{index . "v"}}</span></label>
+          {{end}}
+          </div>
+        {{end}}
+      </fieldset>
+    {{end}}
+    </div>
+    <p><label>Qty <input name="qty" type="number" value="1" min="1" size="3"></label>
+    <button class="btn">Add to cart</button></p>
+  </form>
+</article>
+{{template "foot" .}}

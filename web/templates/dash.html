@@ -4,27 +4,38 @@
   <a href="/dash">Home</a>
   {{if ne .User.Role "consumer"}}
   <a href="/dash/edit">Compose</a>
+  <a href="/dash/scroll">Scroll-thru</a>
+  <a href="/dash/forms">Contact</a>
   <a href="/dash/bio">Bio</a>
   <a href="/dash/media">Media</a>
   <a href="/dash/series">Series</a>
+  {{if .Flags.Shop.On}}
   <a href="/dash/shop">Products</a>
+  <a href="/dash/dept">Departments</a>
+  <a href="/dash/catalog">Indexes</a>
+  {{end}}
+  <a href="/dash/tiers">Tiers</a>
+  {{if .Flags.Appointments.On}}<a href="/dash/cal">{{.BookWord}}</a>{{end}}
   {{end}}
   {{if eq .User.Role "admin"}}
+  <a href="/dash/site">Site</a>
   <a href="/dash/feeds">Aggregator</a>
   <a href="/dash/wallet">Wallet</a>
   <a href="/dash/pay">Payments</a>
   <a href="/dash/badad">badAd</a>
   {{end}}
+  <a href="/cart">Cart</a>
   <a href="/dash/security">Security</a>
 </nav>
 <h1>Dash</h1>
 <p class="hint">Signed in as login ID <code>{{.User.LoginID}}</code> (never public). Role: {{.User.Role}}</p>
 {{if eq .User.Role "consumer"}}
+  <p><a href="/cart">Cart</a></p>
   <h2>Your authors</h2>
   {{range .Data.Feed}}<p><a href="/p/{{.ID}}">{{.Title}}</a> <span class="when">{{.When}}</span></p>{{else}}<p>Follow authors from their bio page.</p>{{end}}
 {{else}}
   {{if .Data.ManySites}}<p class="hint">You can post to more than one site — pick at compose time.</p>{{end}}
-  <p><a class="btn" href="/dash/edit">New piece</a></p>
+  <p><a class="btn" href="/dash/edit">New piece</a> <a class="btn ghost" href="/dash/edit">Landing</a> <a class="btn ghost" href="/dash/forms">Contact</a></p>
   <ul class="plain">
   {{range .Data.Pieces}}<li><a href="/dash/edit?id={{.ID}}">{{.Title}}</a> · {{.Kind}} · {{.When}}</li>{{end}}
   </ul>

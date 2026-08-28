@@ -1,0 +1,14 @@
+{{template "head" .}}
+<div class="dash">
+<nav class="tabs"><a href="/dash">Home</a><a href="/dash/tiers">Tiers</a></nav>
+<h1>Membership tiers</h1>
+<p class="hint">Rank 0 is public. Higher rank inherits lower (Patreon / Paid Memberships Pro). Attach a membership product so paying that product grants the rank.</p>
+<form method="post">
+<p><label>Name <input name="name" required></label>
+<label>Rank <input name="rank" value="1" size="3"></label>
+<label>Product <select name="product_id"><option value="0">—</option>{{range .Data.Products}}<option value="{{.ID}}">{{.Title}}</option>{{end}}</select></label>
+<button class="btn">Add tier</button></p>
+</form>
+<ul class="plain">{{range .Data.List}}<li>rank {{.Rank}} · {{.Name}} {{if .Product}}← {{.Product}}{{end}}</li>{{end}}</ul>
+</div>
+{{template "foot" .}}

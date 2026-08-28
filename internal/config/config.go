@@ -29,6 +29,7 @@ type Config struct {
 	GithubID, GithubSecret                             string
 	OAuthClientID, OAuthClientSecret                   string
 	BadAdURL, BadAdPub, BadAdSec                       string
+	EnableShop, EnableSubs, EnableAppt                 string
 }
 
 type Coin struct {
@@ -161,6 +162,12 @@ func Load(path string) (*Config, error) {
 			c.BadAdPub = v
 		case "badad_sec":
 			c.BadAdSec = v
+		case "enable_shop":
+			c.EnableShop = v
+		case "enable_subs":
+			c.EnableSubs = v
+		case "enable_appointments":
+			c.EnableAppt = v
 		default:
 			if strings.HasSuffix(k, "_key") {
 				t := strings.TrimSuffix(k, "_key")

@@ -1,0 +1,32 @@
+{{template "head" .}}
+<div class="dash">
+<nav class="tabs"><a href="/dash">Home</a><a href="/dash/forms">Contact</a></nav>
+<h1>Contact forms</h1>
+<p class="hint">CF7-shaped: fields in one list. Public at <code>/contact/{slug}</code>.</p>
+<form method="post" id="formed">
+<input type="hidden" name="id" value="{{index .Data.Form "ID"}}">
+<p><label>Name <input name="name" required value="{{index .Data.Form "Name"}}"></label>
+<label>Slug <input name="slug" value="{{index .Data.Form "Slug"}}"></label>
+<label>Notify email <input name="notify" value="{{index .Data.Form "Notify"}}"></label>
+<label>Min tier <input name="min_tier" size="3" value="{{index .Data.Form "Min"}}"></label></p>
+<p><label>Thanks <input name="thanks" value="{{index .Data.Form "Thanks"}}"></label></p>
+<div id="ffields">
+{{range index .Data.Form "Fields"}}
+<p class="ff"><input name="fname" value="{{.Name}}" placeholder="name">
+<input name="flabel" value="{{.Label}}" placeholder="Label">
+<select name="ftype"><option {{if eq .Type "text"}}selected{{end}}>text</option><option {{if eq .Type "email"}}selected{{end}}>email</option><option {{if eq .Type "textarea"}}selected{{end}}>textarea</option><option {{if eq .Type "tel"}}selected{{end}}>tel</option></select>
+<select name="freq"><option value="0">optional</option><option value="1" {{if .Req}}selected{{end}}>required</option></select></p>
+{{end}}
+</div>
+<p><button type="button" class="btn ghost" id="addf">+ field</button> <button class="btn">Save form</button></p>
+</form>
+<ul class="plain">{{range .Data.List}}<li><a href="/dash/forms?id={{.ID}}">{{.Name}}</a> · /contact/{{.Slug}}</li>{{end}}</ul>
+</div>
+<script>
+document.getElementById('addf').onclick=function(){
+  var p=document.createElement('p'); p.className='ff';
+  p.innerHTML='<input name="fname" placeholder="name"> <input name="flabel" placeholder="Label"> <select name="ftype"><option>text</option><option>email</option><option>textarea</option><option>tel</option></select> <select name="freq"><option value="0">optional</option><option value="1">required</option></select>';
+  document.getElementById('ffields').appendChild(p);
+};
+</script>
+{{template "foot" .}}

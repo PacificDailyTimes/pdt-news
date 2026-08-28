@@ -7,6 +7,12 @@
 <p><label>Name <input name="name" value="{{.Data.Name}}"></label></p>
 {{if .Multi}}<p><label>Public handle <input name="handle" value="{{.Data.PublicHandle}}"></label></p>{{end}}
 <p><label>Bio<br><textarea name="bio" rows="8">{{.Data.Bio}}</textarea></label></p>
+<p>Social
+<label>X <input name="social_x"></label>
+<label>GitHub <input name="social_github"></label>
+<label>YouTube <input name="social_youtube"></label>
+<label>RSS <input name="social_rss"></label>
+</p>
 <p><button class="btn">Save</button></p>
 </form>
 </div>

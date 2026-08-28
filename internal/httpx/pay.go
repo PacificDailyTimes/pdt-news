@@ -17,20 +17,6 @@ import (
 	"github.com/PacificDailyTimes/pdt-news/internal/tax"
 )
 
-func (s *Server) payCfg() pay.Cfg {
-	c := pay.Cfg{
-		StripeSecret: s.cfg.StripeSecret, StripePub: s.cfg.StripePub,
-		PaypalID: s.cfg.PaypalID, PaypalSecret: s.cfg.PaypalSecret,
-		PaypalSandbox: s.cfg.PaypalSandbox, Origin: s.cfg.URL,
-	}
-	for t, coin := range s.cfg.Coins {
-		if coin.Address != "" {
-			c.Coins = append(c.Coins, pay.Coin{Ticker: strings.ToUpper(t), Address: coin.Address})
-		}
-	}
-	return c
-}
-
 func (s *Server) checkout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Redirect(w, r, "/shop", http.StatusSeeOther)

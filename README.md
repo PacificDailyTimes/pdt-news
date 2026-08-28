@@ -1,8 +1,10 @@
 # pdt-news
 
-A news CMS in Go. Not WordPress. Path-only **multiauthor** when you want a paper plus author blogs; a single-author blog when you don’t.
+A news CMS in Go. Not WordPress. Path-only **network** when you want a paper plus author blogs; a single-author blog when you don’t.
 
 GPLv3. PostgreSQL. Nginx in front of `127.0.0.1:9001`.
+
+One compose family, one shop family, one site family — not pages over here and WooCommerce over there.
 
 ## Two modes (`mode=` in config)
 
@@ -13,37 +15,70 @@ GPLv3. PostgreSQL. Nginx in front of `127.0.0.1:9001`.
 | Author blog | — | `domain.tld/handle` |
 | Login | **login ID**, never a URL | same |
 
-Do not call this “multisite” or “multiauthor”. It is a **network**. Subdomain author blogs wait on inkcert.
+Subdomain author blogs wait on inkcert.
 
 ## People
 
-- **Admin** — paper, sites, wallet, aggregator, products
+- **Admin** — paper, site look, SEO, menus, wallet, aggregator, shop
 - **Author** — compose, bio, media. Public **handle** only if they want one
-- **Consumer** — shop, follow authors, read in-house feeds. No public username. No comments.
+- **Consumer** — cart, follow authors, bookings, invoices. No public username. No comments.
 
 Login ID ≠ handle. Login ID never prints on the public site.
 
-## Content
+## Content (one editor)
 
-- **Piece** (post) and **page** (menus)
-- **Series** (501 taxonomy) with `/series/slug`, `/rss`, `/atom`, `/feed`
-- Featured image / audio / video at top or bottom (podcast enclosure)
-- **Product**: physical, virtual, or a simple subscription (`every N day|week|month|year`, start date, skip-until)
-- RSS importer (aggregator)
+| Type | What it is |
+|---|---|
+| **Piece** | Post. A piece can be a podcast episode (featured audio). |
+| **Page** | Same editor, not a different app. |
+| **Landing** | 1–7 CTA columns. Each column: header, button, logo, text, background (flat / gradient / image). Count is AJAX like 501 series. |
+| **Contact** | CF7-shaped form. Fields in one list. `/contact/{slug}` |
+| **Scroll-thru** | Stack of pages / landings / contacts. URL changes as you scroll: `/{scroll}/welcome` → `/{scroll}/tiers`. Network: `/{handle}/{scroll}/{item}` |
+| **Series** | 501 taxonomy. `/series/slug`, `/rss`, `/atom`, `/feed` |
 
-## Reader
+Every type has a **min tier** (0 = public). Higher membership ranks inherit lower, like Patreon / Paid Memberships Pro.
 
-`Aa` control: white / black / dark / gray / beige; Newsreader (old-style), Source Serif 4 (transitional), Source Sans 3; size; newspaper columns off or N-per-16:9-screen (scales with window width); copy link.
+## Shop
 
-Fonts are OFL and vendored in `web/static/fonts/`.
+| Type | URL |
+|---|---|
+| Product | `/shop/{slug}` |
+| Department (product series) | `/shop/d/{slug}` |
+| Product index | `/shop/i/{slug}` |
+| Cart | `/cart` — qty, save for later, favorite, remove |
 
-## Auth
+Two subscriptions, on purpose:
 
-Email **code + link** (default). Optional password. Authenticator (TOTP). Installer is **passwordless** unless you set `setup_password=` (plaintext) or `setup_password_hash=` (sha256 hex) in config.
+1. **Membership** — access rank (does not ship)
+2. **Product subscription** — ship / access on a beat (`every N day\|week\|month\|year`, start, skip-until)
+
+Product **features** are one shape: name + `menu` (Amazon swatches: selected, gray, slash if unavailable) or `select` (dropdown). Color, size, material, style — same input.
+
+A membership can sit on a landing column next to a product. Same checkout.
+
+## Calendar
+
+Site-wide word: **appointment** or **reservation**. Slot size + weekday windows. Busy time from a Google/iCal/CalDAV feed (paste the secret iCal URL). Bookings export `/cal/{slug}.ics`. Tiers and optional payment on the book.
+
+## Site
+
+Dash → Site: look (round/square corners), SEO (title, description, image, robots — same idea as 501 `in.head.php`), social (site-wide; authors have their own on Bio), menus (up/down, places above/below post, page, landing, series, shop, department, product), feature toggles, payment keys.
+
+**SysAdmin config wins.** If `stripe_secret=` is in `/etc/pdt/config`, the dashboard key fields lock. If it is empty, a friendly single-blog admin fills them in the dash. Feature flags: empty = site admin may toggle; `0`/`1` locks them.
+
+badAd is the other way around: keys live only in config. That product is a wide network with a powerful SysAdmin.
 
 ## Money
 
-Stripe / PayPal keys in config or the admin dash. **Same three methods as badAd:** Stripe and PayPal do one-time **or** auto-renewing memberships/subscriptions; crypto is prepaid for one period and **never** renews. US destination tax from a state table. Invoices as a short email + PDF. Crypto addresses and **key files only in `/etc/pdt/wallet/`** (0700). Tarball installs still use that FHS path for keys.
+Stripe / PayPal: one-time **or** auto-renewing memberships/subscriptions. Crypto: prepaid, **never** renews. US destination tax. Invoices email + PDF. Crypto keys only in `/etc/pdt/wallet/` (0700).
+
+## Reader
+
+`Aa`: white / black / dark / gray / beige; Newsreader / Source Serif 4 / Source Sans 3; size; newspaper columns; copy link.
+
+## Auth
+
+Email code + link. Optional password. Authenticator. Google / Apple / GitHub. Installer is passwordless unless `setup_password=` or `setup_password_hash=`.
 
 ## Install
 
@@ -53,17 +88,4 @@ go build -o pdt ./cmd/pdt
 # open /install
 ```
 
-Packages (Arch / Debian / RPM): `pack/`. Post-install:
-
-```
-sudo bash /usr/share/pdt/contrib/pdt-install --url https://example.tld --db-name pdt --db-user pdt --db-pass secret
-# or --interactive  (still no setup-password prompt)
-```
-
-Config lives at `/etc/pdt/config`, symlinked from `/srv/www/pdt/config` (or `/var/www/pdt`). Tarball: `config` next to the binary.
-
-Nginx sample: `contrib/nginx/pdt.conf`.
-
-## write.pink
-
-Colored words (editor color + dashboard CSS classes), featured media, series feeds, shop links, a reading surface that does not fight the page — those behaviors live here without cloning that theme.
+Packages: `pack/`. Config: `/etc/pdt/config`, symlinked from `/srv/www/pdt/config`. Nginx: `contrib/nginx/pdt.conf`.

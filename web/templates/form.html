@@ -1,0 +1,17 @@
+{{template "head" .}}
+<div class="slim">
+<h1>{{if .Data}}{{index .Data "Name"}}{{else}}Contact{{end}}</h1>
+{{if .Flash}}<p class="flash">{{.Flash}}</p>{{end}}
+{{if .Data}}
+<form method="post">
+{{range index .Data "Fields"}}
+<p><label>{{index . "label"}}
+{{if eq (index . "type") "textarea"}}<br><textarea name="{{index . "name"}}" {{if index . "required"}}required{{end}}></textarea>
+{{else}}<input type="{{index . "type"}}" name="{{index . "name"}}" {{if index . "required"}}required{{end}}>{{end}}
+</label></p>
+{{end}}
+<p><button class="btn">Send</button></p>
+</form>
+{{end}}
+</div>
+{{template "foot" .}}

@@ -45,10 +45,10 @@ mail_from_name=pdt-news
 # smtp_pass=
 # smtp_secure=tls
 
-# --- payments (also editable in the admin dash; env/config wins if set) ---
-# Same three methods as badAd: Stripe, PayPal, crypto.
-# Stripe/PayPal: one-time OR auto-renewing membership/subscription.
-# Crypto: prepaid period only. Never renews.
+# --- payments ---
+# Config values OVERRIDE and LOCK the dashboard payment-key fields.
+# Leave them empty here for a friendly single-blog: the site admin fills Dash → Site → Payments.
+# SysAdmin / network: set them here so nobody in the web UI can change them.
 # stripe_secret=
 # stripe_publishable=
 # stripe_webhook_secret=
@@ -97,4 +97,11 @@ theme=masthead
 # badad_url=https://badad.one
 # badad_pub=
 # badad_sec=
+
+# --- feature locks (SysAdmin). Empty = site admin may toggle in Dash → Site.
+# 1/on  = force on.  0/off = force off (locks the web toggle).
+# enable_shop=
+# enable_subs=
+# enable_appointments=
+
 

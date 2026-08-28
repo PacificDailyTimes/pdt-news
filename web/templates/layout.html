@@ -1,9 +1,17 @@
 {{define "head"}}<!DOCTYPE html>
-<html lang="en" data-theme="{{.Theme}}" data-mode="white">
+<html lang="en" data-theme="{{.Theme}}" data-mode="white" data-corners="{{if .Corners}}{{.Corners}}{{else}}square{{end}}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{{if .Title}}{{.Title}} · {{end}}{{if .Site}}{{index .Site "name"}}{{else}}pdt-news{{end}}</title>
+<title>{{if .SEOTitle}}{{.SEOTitle}}{{else if .Title}}{{.Title}} · {{end}}{{if .Site}}{{index .Site "name"}}{{else}}pdt-news{{end}}</title>
+{{if .SEODesc}}<meta name="description" content="{{.SEODesc}}">{{end}}
+<meta name="robots" content="{{if .Robots}}{{.Robots}}{{else}}index,follow{{end}}">
+{{if .Canonical}}<link rel="canonical" href="{{.Canonical}}">{{end}}
+<meta property="og:title" content="{{if .SEOTitle}}{{.SEOTitle}}{{else}}{{.Title}}{{end}}">
+{{if .SEODesc}}<meta property="og:description" content="{{.SEODesc}}">{{end}}
+{{if .SEOImage}}<meta property="og:image" content="{{.SEOImage}}">{{end}}
+<meta property="og:type" content="website">
+{{if .Canonical}}<meta property="og:url" content="{{.Canonical}}">{{end}}
 <link rel="stylesheet" href="/static/css/pdt.css">
 <link rel="alternate" type="application/rss+xml" href="/rss">
 </head>
@@ -14,18 +22,27 @@
     <a class="mark" href="/">{{if .Site}}{{index .Site "name"}}{{else}}pdt-news{{end}}</a>
     {{if .Site}}{{if index .Site "tagline"}}<p class="kick">{{index .Site "tagline"}}</p>{{end}}{{end}}
     <nav>
+      {{range .HeaderNav}}<a href="{{.Href}}" class="nav-{{.Kind}}">{{.Label}}</a>{{else}}
       <a href="/">Front</a>
-      <a href="/shop">Shop</a>
+      {{if .Flags.Shop.On}}<a href="/shop">Shop</a>{{end}}
       <a href="/rss">RSS</a>
+      {{end}}
+      <a href="/search">Search</a>
       {{if .User}}<a href="/dash">Dash</a><a href="/logout">Out</a>
       {{else}}<a href="/login">Sign in</a>{{end}}
     </nav>
+    {{if .Social}}<p class="social">{{range .Social}}<a href="{{.URL}}" rel="me">{{.Net}}</a> {{end}}</p>{{end}}
   </div>
 </header>
+{{if .AboveNav}}<nav class="band">{{range .AboveNav}}<a href="{{.Href}}">{{.Label}}</a>{{end}}</nav>{{end}}
 <div id="content" class="wrap">
 {{end}}
 {{define "foot"}}
 </div>
+{{if .BelowNav}}<nav class="band">{{range .BelowNav}}<a href="{{.Href}}">{{.Label}}</a>{{end}}</nav>{{end}}
+<footer class="sitefoot">
+  <nav>{{range .FooterNav}}<a href="{{.Href}}">{{.Label}}</a>{{end}}</nav>
+</footer>
 <button type="button" class="aa" id="readerBtn" title="Reader">Aa</button>
 <div id="readerDock" class="dock" hidden></div>
 <script src="/static/js/reader.js"></script>

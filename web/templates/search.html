@@ -1,0 +1,11 @@
+{{template "head" .}}
+<div class="slim">
+<h1>Search</h1>
+<form method="get"><p><input name="q" value="{{index .Data "Q"}}" autofocus> <button class="btn">Search</button></p></form>
+<ul class="plain">
+{{range index .Data "Hits"}}
+<li><a href="/{{.Slug}}">{{.Title}}</a><p class="hint">{{.Excerpt}}</p></li>
+{{else}}{{if index .Data "Q"}}<li>Nothing matched.</li>{{end}}{{end}}
+</ul>
+</div>
+{{template "foot" .}}

@@ -1,0 +1,100 @@
+{{template "head" .}}
+<div class="dash">
+<nav class="tabs"><a href="/dash">Home</a><a href="/dash/site">Site</a></nav>
+<h1>Site</h1>
+<p class="hint">SysAdmin config overrides lock the matching field. Empty config = you may edit.</p>
+
+<h2>Look & SEO</h2>
+<form method="post">
+<input type="hidden" name="act" value="look">
+<p><label>Tagline <input name="tagline" value="{{index .Data "Tagline"}}"></label>
+<label>Corners <select name="corners"><option value="square" {{if eq (index .Data "Corners") "square"}}selected{{end}}>square</option><option value="round" {{if eq (index .Data "Corners") "round"}}selected{{end}}>round</option></select></label>
+<label>Book word <select name="book_word"><option value="appointment" {{if eq (index .Data "BookWord") "appointment"}}selected{{end}}>appointment</option><option value="reservation" {{if eq (index .Data "BookWord") "reservation"}}selected{{end}}>reservation</option></select></label></p>
+<p><label>Description<br><textarea name="description">{{index .Data "Descr"}}</textarea></label></p>
+<p><label>SEO title <input name="seo_title" value="{{index .Data "SEOTitle"}}"></label></p>
+<p><label>SEO description <input name="seo_desc" value="{{index .Data "SEODesc"}}"></label></p>
+<p><label>SEO image <input name="seo_image" value="{{index .Data "SEOImage"}}"></label></p>
+<p><label>Robots <input name="robots" value="{{index .Data "Robots"}}"></label></p>
+<p>Social (site-wide):
+<label>X <input name="social_x" value="{{index .Data.Social "x"}}"></label>
+<label>GitHub <input name="social_github" value="{{index .Data.Social "github"}}"></label>
+<label>YouTube <input name="social_youtube" value="{{index .Data.Social "youtube"}}"></label>
+<label>Facebook <input name="social_facebook" value="{{index .Data.Social "facebook"}}"></label>
+<label>Instagram <input name="social_instagram" value="{{index .Data.Social "instagram"}}"></label>
+</p>
+<p><button class="btn">Save look</button></p>
+</form>
+
+<h2>Features</h2>
+<form method="post">
+<input type="hidden" name="act" value="flags">
+{{$f := index .Data "Flags"}}
+<p><label><input type="checkbox" name="shop" value="1" {{if $f.Shop.On}}checked{{end}} {{if $f.Shop.Locked}}disabled{{end}}> Shop / products {{if $f.Shop.Locked}}(locked in config){{end}}</label></p>
+<p><label><input type="checkbox" name="subs" value="1" {{if $f.Subs.On}}checked{{end}} {{if $f.Subs.Locked}}disabled{{end}}> Subscriptions {{if $f.Subs.Locked}}(locked in config){{end}}</label></p>
+<p><label><input type="checkbox" name="appointments" value="1" {{if $f.Appointments.On}}checked{{end}} {{if $f.Appointments.Locked}}disabled{{end}}> {{.BookWord}}s {{if $f.Appointments.Locked}}(locked in config){{end}}</label></p>
+<p><button class="btn">Save features</button></p>
+</form>
+
+<h2>Payment keys</h2>
+{{if index .Data "PayLocked"}}
+<p class="hint">Locked by SysAdmin config. Stripe/PayPal/crypto keys live in <code>/etc/pdt/config</code>.</p>
+{{else}}
+<form method="post">
+<input type="hidden" name="act" value="pay">
+<p><label>Stripe secret <input name="stripe_secret" type="password" autocomplete="off"></label>
+<label>Stripe publishable <input name="stripe_publishable"></label></p>
+<p><label>PayPal client <input name="paypal_client_id"></label>
+<label>PayPal secret <input name="paypal_secret" type="password" autocomplete="off"></label>
+<label><input type="checkbox" name="paypal_sandbox" value="1"> sandbox</label></p>
+<p class="hint">Crypto receive addresses stay in config / <code>/etc/pdt/wallet/</code> — SysAdmin only.</p>
+<p><button class="btn">Save keys</button></p>
+</form>
+{{end}}
+
+<h2>Menus</h2>
+<p class="hint">Places: header, footer, and above-/below- for post, page, landing, series, shop, department, product. Up/down, not WordPress-drag.</p>
+{{range index .Data "Navs"}}
+<h3>{{.Name}} <span class="hint">{{.Places}}</span></h3>
+<ul class="plain">
+{{range .Items}}
+<li>
+  {{.Label}} → {{.Href}} ({{.Kind}})
+  <form method="post" style="display:inline"><input type="hidden" name="act" value="navmove"><input type="hidden" name="id" value="{{.ID}}"><button name="dir" value="up">↑</button><button name="dir" value="down">↓</button></form>
+  <form method="post" style="display:inline"><input type="hidden" name="act" value="navdel"><button name="id" value="{{.ID}}">×</button></form>
+</li>
+{{end}}
+</ul>
+<form method="post">
+<input type="hidden" name="act" value="navitem">
+<input type="hidden" name="nav_id" value="{{.ID}}">
+<p><input name="label" placeholder="Label"> <input name="href" placeholder="/ or https://…">
+<select name="kind"><option value="link">link</option><option value="social">social</option><option value="node">page/piece</option></select>
+<button class="btn">Add item</button></p>
+</form>
+{{end}}
+<form method="post">
+<input type="hidden" name="act" value="nav">
+<p><label>New menu <input name="nav_name" required></label></p>
+<p class="places">
+{{range $p := (index .Data "PlaceOpts")}}{{end}}
+<label><input type="checkbox" name="place" value="header" checked> header</label>
+<label><input type="checkbox" name="place" value="footer"> footer</label>
+<label><input type="checkbox" name="place" value="above-post"> above post</label>
+<label><input type="checkbox" name="place" value="below-post"> below post</label>
+<label><input type="checkbox" name="place" value="above-page"> above page</label>
+<label><input type="checkbox" name="place" value="below-page"> below page</label>
+<label><input type="checkbox" name="place" value="above-landing"> above landing</label>
+<label><input type="checkbox" name="place" value="below-landing"> below landing</label>
+<label><input type="checkbox" name="place" value="above-series"> above series</label>
+<label><input type="checkbox" name="place" value="below-series"> below series</label>
+<label><input type="checkbox" name="place" value="above-shop"> above shop</label>
+<label><input type="checkbox" name="place" value="below-shop"> below shop</label>
+<label><input type="checkbox" name="place" value="above-department"> above department</label>
+<label><input type="checkbox" name="place" value="below-department"> below department</label>
+<label><input type="checkbox" name="place" value="above-product"> above product</label>
+<label><input type="checkbox" name="place" value="below-product"> below product</label>
+</p>
+<p><button class="btn">Create menu</button></p>
+</form>
+</div>
+{{template "foot" .}}

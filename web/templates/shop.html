@@ -1,35 +1,14 @@
 {{template "head" .}}
 <h1>Shop</h1>
+{{if index .Data "Depts"}}<nav class="band">{{range index .Data "Depts"}}<a href="/shop/d/{{.Slug}}">{{.Name}}</a>{{end}}</nav>{{end}}
 <div class="deck">
-{{range .Data}}
+{{range index .Data "Products"}}
 <article class="card">
   <p class="kicker">{{.Kind}}</p>
-  <h2>{{.Title}}</h2>
+  <h2><a href="/shop/{{.Slug}}">{{.Title}}</a></h2>
   <p>{{.Body}}</p>
   <p class="price">${{.Price}}</p>
-  <form method="post" action="/checkout">
-    <input type="hidden" name="product_id" value="{{.ID}}">
-    <p><label>Email <input type="email" name="email" required></label></p>
-    <p><label>State <input name="state" size="2" placeholder="MI"></label>
-       <label>ZIP <input name="zip" size="10"></label></p>
-    {{if or (eq .Kind "subscription") (eq .Kind "membership")}}
-    <p><label>Start <input type="date" name="start_on"></label>
-       <label>Skip until <input type="date" name="skip_until"></label></p>
-    <p class="hint">Stripe and PayPal can auto-renew. Crypto is prepaid for one period and never renews.</p>
-    {{end}}
-    <p><label>Pay
-      <select name="pay_via">
-        <option value="invoice">invoice (email + PDF)</option>
-        <option value="stripe">Stripe</option>
-        <option value="paypal">PayPal</option>
-        <option value="crypto">crypto (prepaid, no renew)</option>
-      </select>
-    </label></p>
-    {{if or (eq .Kind "subscription") (eq .Kind "membership")}}
-    <p><label><input type="checkbox" name="renew" value="1" checked> auto-renew (ignored for crypto)</label></p>
-    {{end}}
-    <p><button class="btn">Buy</button></p>
-  </form>
+  <p><a class="btn" href="/shop/{{.Slug}}">View</a></p>
 </article>
 {{else}}<p>No products yet.</p>{{end}}
 </div>

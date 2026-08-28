@@ -8,12 +8,18 @@
 {{else}}
 {{range .Data.Sites}}<input type="hidden" name="site_id" value="{{.ID}}">{{end}}
 {{end}}
-<p><label>Type <select name="type"><option value="post" {{if eq .Data.Piece.Type "post"}}selected{{end}}>piece</option><option value="page" {{if eq .Data.Piece.Type "page"}}selected{{end}}>page</option></select></label>
+<p><label>Type <select name="type" id="ptype">
+<option value="post" {{if eq .Data.Piece.Type "post"}}selected{{end}}>piece (post / podcast)</option>
+<option value="page" {{if eq .Data.Piece.Type "page"}}selected{{end}}>page</option>
+<option value="landing" {{if eq .Data.Piece.Type "landing"}}selected{{end}}>landing</option>
+</select></label>
 <label>Status <select name="status"><option value="draft">draft</option><option value="live" {{if eq .Data.Piece.Status "live"}}selected{{end}}>live</option></select></label>
-<label>Series <select name="series_id"><option value="0">—</option>{{range .Data.Series}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></label></p>
+<label>Series <select name="series_id"><option value="0">—</option>{{range .Data.Series}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></label>
+<label>Min tier <input name="min_tier" value="{{.Data.Piece.Min}}" size="3" title="0 = public"></label></p>
 <p><label>Title <input name="title" required value="{{.Data.Piece.Title}}"></label></p>
 <p><label>Slug <input name="slug" value="{{.Data.Piece.Slug}}"></label></p>
 <p><label>Excerpt<br><textarea name="excerpt" rows="2">{{.Data.Piece.Excerpt}}</textarea></label></p>
+<div id="postish">
 <div class="edbar" id="edbar">
   <button type="button" data-cmd="bold"><b>B</b></button>
   <button type="button" data-cmd="italic"><i>I</i></button>
@@ -34,8 +40,24 @@
 <option value="bottom">bottom</option>
 <option value="inline">inline only</option>
 </select></label></p>
+</div>
+<div id="landish" hidden>
+<p class="hint">Landing: 1–7 CTA columns. AJAX like the 501 series editor — change the count, columns appear. Each column is header, button, logo, text, background.</p>
+<p><label>Columns <input type="number" id="ncols" min="1" max="7" value="3"></label>
+<label>Corners <select id="lcorners"><option value="square">square</option><option value="round">round</option></select></label></p>
+<p><textarea name="text_above" id="text_above" placeholder="Text above the columns"></textarea></p>
+<div id="cols"></div>
+<p><textarea name="text_below" id="text_below" placeholder="Text below the columns"></textarea></p>
+<input type="hidden" name="landing" id="landingField" value="{{.Data.Piece.Landing}}">
+</div>
+<details><summary>SEO</summary>
+<p><label>SEO title <input name="seo_title" value="{{.Data.Piece.SEOTitle}}"></label></p>
+<p><label>SEO description <input name="seo_desc" value="{{.Data.Piece.SEODesc}}"></label></p>
+<p><label>SEO image URL <input name="seo_image" value="{{.Data.Piece.SEOImage}}"></label></p>
+</details>
 <p><button class="btn">Save</button></p>
 </form>
 </div>
 <script src="/static/js/editor.js"></script>
+<script src="/static/js/landing.js"></script>
 {{template "foot" .}}

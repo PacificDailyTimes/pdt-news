@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"html"
 	"html/template"
@@ -20,6 +21,7 @@ import (
 	"github.com/PacificDailyTimes/pdt-news/internal/agg"
 	"github.com/PacificDailyTimes/pdt-news/internal/config"
 	"github.com/PacificDailyTimes/pdt-news/internal/db"
+	"github.com/PacificDailyTimes/pdt-news/internal/flags"
 	"github.com/PacificDailyTimes/pdt-news/internal/mailer"
 	"github.com/PacificDailyTimes/pdt-news/internal/totp"
 	"github.com/PacificDailyTimes/pdt-news/internal/wallet"
@@ -97,12 +99,24 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/dash/pay", s.dashPay)
 	s.mux.HandleFunc("/dash/security", s.security)
 	s.mux.HandleFunc("/dash/badad", s.dashBadAd)
+	s.mux.HandleFunc("/dash/site", s.dashSite)
+	s.mux.HandleFunc("/dash/forms", s.dashForms)
+	s.mux.HandleFunc("/dash/scroll", s.dashScroll)
+	s.mux.HandleFunc("/dash/dept", s.dashDept)
+	s.mux.HandleFunc("/dash/catalog", s.dashCatalog)
+	s.mux.HandleFunc("/dash/tiers", s.dashTiers)
+	s.mux.HandleFunc("/dash/cal", s.dashCal)
+	s.mux.HandleFunc("/dash/ajax/landing", s.ajaxLanding)
 	s.mux.HandleFunc("/shop", s.shop)
+	s.mux.HandleFunc("/cart", s.cart)
 	s.mux.HandleFunc("/checkout", s.checkout)
 	s.mux.HandleFunc("/pay/return", s.payReturn)
 	s.mux.HandleFunc("/pay/stripe/webhook", s.payStripeWH)
 	s.mux.HandleFunc("/pay/paypal/webhook", s.payPaypalWH)
 	s.mux.HandleFunc("/pay/crypto", s.payCryptoNote)
+	s.mux.HandleFunc("/search", s.search)
+	s.mux.HandleFunc("/sitemap.xml", s.sitemap)
+	s.mux.HandleFunc("/robots.txt", s.robots)
 	s.mux.HandleFunc("/rss", s.feed("rss"))
 	s.mux.HandleFunc("/atom", s.feed("atom"))
 	s.mux.HandleFunc("/feed", s.feed("rss"))
@@ -158,11 +172,16 @@ func (s *Server) setSession(w http.ResponseWriter, uid int64) {
 }
 
 type page struct {
-	Title, Theme, Mode, URL, Flash, Err string
-	Multi                               bool
-	User                                *db.User
-	Site                                map[string]any
-	Data                                any
+	Title, Theme, Mode, URL, Flash, Err            string
+	Multi                                          bool
+	User                                           *db.User
+	Site                                           map[string]any
+	Data                                           any
+	SEOTitle, SEODesc, SEOImage, Robots, Canonical string
+	HeaderNav, FooterNav, AboveNav, BelowNav       []map[string]any
+	Corners, Place, BookWord                       string
+	Social                                         []map[string]string
+	Flags                                          flags.Set
 }
 
 func (s *Server) base(r *http.Request, title string) page {
@@ -182,6 +201,7 @@ func (s *Server) base(r *http.Request, title string) page {
 			p.Theme = theme
 		}
 	}
+	s.decorate(&p, "")
 	return p
 }
 
@@ -437,9 +457,13 @@ func (s *Server) dashBio(w http.ResponseWriter, r *http.Request) {
 		if handle != "" && s.cfg.Multi() {
 			hp = &handle
 		}
+		social, _ := json.Marshal(map[string]string{
+			"x": r.FormValue("social_x"), "github": r.FormValue("social_github"),
+			"youtube": r.FormValue("social_youtube"), "rss": r.FormValue("social_rss"),
+		})
 		_, _ = pool.Exec(context.Background(),
-			`UPDATE users SET name=$1, bio=$2, handle=$3 WHERE id=$4`,
-			r.FormValue("name"), r.FormValue("bio"), hp, u.ID)
+			`UPDATE users SET name=$1, bio=$2, handle=$3, social=$4::jsonb WHERE id=$5`,
+			r.FormValue("name"), r.FormValue("bio"), hp, string(social), u.ID)
 		http.Redirect(w, r, "/dash/bio", http.StatusSeeOther)
 		return
 	}
@@ -470,17 +494,26 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 		}
 		seriesID := nullInt(r.FormValue("series_id"))
 		featPlace := val(r, "feat_place", "top")
+		min, _ := strconv.Atoi(r.FormValue("min_tier"))
+		landing := r.FormValue("landing")
+		var land any
+		if landing != "" {
+			land = landing
+		} else if typ == "landing" {
+			land = "{}"
+		}
 		var pub any
 		if status == "live" {
 			pub = time.Now()
 		}
 		if id == 0 {
 			err := pool.QueryRow(context.Background(),
-				`INSERT INTO pieces(site_id,author_id,type,status,series_id,title,slug,content,excerpt,feat_img,feat_aud,feat_vid,feat_place,published_at)
-				 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
+				`INSERT INTO pieces(site_id,author_id,type,status,series_id,title,slug,content,excerpt,feat_img,feat_aud,feat_vid,feat_place,published_at,min_tier,seo_title,seo_desc,seo_image,landing)
+				 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING id`,
 				siteID, u.ID, typ, status, seriesID, title, slug, content, excerpt,
 				nullStr(r.FormValue("feat_img")), nullStr(r.FormValue("feat_aud")), nullStr(r.FormValue("feat_vid")),
-				featPlace, pub).Scan(&id)
+				featPlace, pub, min, nullStr(r.FormValue("seo_title")), nullStr(r.FormValue("seo_desc")),
+				nullStr(r.FormValue("seo_image")), land).Scan(&id)
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				return
@@ -488,11 +521,13 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 		} else {
 			_, err := pool.Exec(context.Background(),
 				`UPDATE pieces SET title=$1,slug=$2,type=$3,status=$4,series_id=$5,content=$6,excerpt=$7,
-				 feat_img=$8,feat_aud=$9,feat_vid=$10,feat_place=$11,published_at=COALESCE($12,published_at),updated_at=now()
-				 WHERE id=$13 AND (author_id=$14 OR $15='admin')`,
+				 feat_img=$8,feat_aud=$9,feat_vid=$10,feat_place=$11,published_at=COALESCE($12,published_at),updated_at=now(),
+				 min_tier=$13,seo_title=$14,seo_desc=$15,seo_image=$16,landing=$17
+				 WHERE id=$18 AND (author_id=$19 OR $20='admin')`,
 				title, slug, typ, status, seriesID, content, excerpt,
 				nullStr(r.FormValue("feat_img")), nullStr(r.FormValue("feat_aud")), nullStr(r.FormValue("feat_vid")),
-				featPlace, pub, id, u.ID, u.Role)
+				featPlace, pub, min, nullStr(r.FormValue("seo_title")), nullStr(r.FormValue("seo_desc")),
+				nullStr(r.FormValue("seo_image")), land, id, u.ID, u.Role)
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				return
@@ -501,16 +536,18 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/dash/edit?id="+strconv.FormatInt(id, 10), http.StatusSeeOther)
 		return
 	}
-	row := map[string]any{"ID": id, "Type": "post", "Status": "draft", "FeatPlace": "top"}
+	row := map[string]any{"ID": id, "Type": "post", "Status": "draft", "FeatPlace": "top", "Min": 0, "Landing": "{}"}
 	if id > 0 {
 		var pid, seriesID, siteID int64
-		var title, slug, typ, status, content, excerpt, featImg, featAud, featVid, featPlace string
+		var title, slug, typ, status, content, excerpt, featImg, featAud, featVid, featPlace, seot, seod, seoi, landing string
+		var min int
 		_ = pool.QueryRow(context.Background(),
-			`SELECT id,title,slug,type,status,content,excerpt,coalesce(feat_img,''),coalesce(feat_aud,''),coalesce(feat_vid,''),feat_place,coalesce(series_id,0),site_id
+			`SELECT id,title,slug,type,status,content,excerpt,coalesce(feat_img,''),coalesce(feat_aud,''),coalesce(feat_vid,''),feat_place,coalesce(series_id,0),site_id,
+			        min_tier,coalesce(seo_title,''),coalesce(seo_desc,''),coalesce(seo_image,''),coalesce(landing::text,'{}')
 			 FROM pieces WHERE id=$1`, id).Scan(
 			&pid, &title, &slug, &typ, &status, &content, &excerpt,
-			&featImg, &featAud, &featVid, &featPlace, &seriesID, &siteID)
-		row = map[string]any{"ID": pid, "Title": title, "Slug": slug, "Type": typ, "Status": status, "Content": content, "Excerpt": excerpt, "FeatImg": featImg, "FeatAud": featAud, "FeatVid": featVid, "FeatPlace": featPlace, "SeriesID": seriesID, "SiteID": siteID}
+			&featImg, &featAud, &featVid, &featPlace, &seriesID, &siteID, &min, &seot, &seod, &seoi, &landing)
+		row = map[string]any{"ID": pid, "Title": title, "Slug": slug, "Type": typ, "Status": status, "Content": content, "Excerpt": excerpt, "FeatImg": featImg, "FeatAud": featAud, "FeatVid": featVid, "FeatPlace": featPlace, "SeriesID": seriesID, "SiteID": siteID, "Min": min, "SEOTitle": seot, "SEODesc": seod, "SEOImage": seoi, "Landing": landing}
 	}
 	var sites, series, classes []map[string]any
 	srows, _ := pool.Query(context.Background(),
@@ -715,15 +752,22 @@ func (s *Server) dashShop(w http.ResponseWriter, r *http.Request) {
 			n = atoi(val(r, "interval_n", "1"))
 			unit = val(r, "interval_unit", "month")
 		}
+		min, _ := strconv.Atoi(r.FormValue("min_tier"))
+		feat := r.FormValue("features")
+		if feat == "" {
+			feat = "[]"
+		}
 		_, _ = pool.Exec(context.Background(),
-			`INSERT INTO products(site_id,title,slug,body,price_cents,kind,interval_n,interval_unit,ship,virtual_url)
-			 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+			`INSERT INTO products(site_id,title,slug,body,price_cents,kind,interval_n,interval_unit,ship,virtual_url,department_id,min_tier,features,stock)
+			 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14)`,
 			sid, r.FormValue("title"), slugify(r.FormValue("title")), r.FormValue("body"),
-			price, kind, n, unit, r.FormValue("ship") == "1", nullStr(r.FormValue("virtual_url")))
+			price, kind, n, unit, r.FormValue("ship") == "1", nullStr(r.FormValue("virtual_url")),
+			nullInt(r.FormValue("department_id")), min, feat, nullInt(r.FormValue("stock")))
 		http.Redirect(w, r, "/dash/shop", http.StatusSeeOther)
 		return
 	}
 	p := s.base(r, "Products")
+	s.decorate(&p, "")
 	rows, _ := pool.Query(context.Background(), `SELECT id,title,price_cents,kind,slug FROM products ORDER BY id DESC`)
 	var list []map[string]any
 	for rows.Next() {
@@ -734,7 +778,16 @@ func (s *Server) dashShop(w http.ResponseWriter, r *http.Request) {
 		list = append(list, map[string]any{"ID": id, "Title": t, "Price": fmt.Sprintf("%.2f", float64(pc)/100), "Kind": k, "Slug": sl})
 	}
 	rows.Close()
-	p.Data = list
+	depts := []map[string]any{}
+	dr, _ := pool.Query(context.Background(), `SELECT id,name FROM departments ORDER BY name`)
+	for dr.Next() {
+		var id int64
+		var n string
+		_ = dr.Scan(&id, &n)
+		depts = append(depts, map[string]any{"ID": id, "Name": n})
+	}
+	dr.Close()
+	p.Data = map[string]any{"List": list, "Depts": depts}
 	s.render(w, "dash-shop.html", p)
 }
 
@@ -781,12 +834,17 @@ func (s *Server) security(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) shop(w http.ResponseWriter, r *http.Request) {
+	if !s.flags().Shop.On {
+		http.NotFound(w, r)
+		return
+	}
 	pool, err := s.db()
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
 	p := s.base(r, "Shop")
+	s.decorate(&p, "shop")
 	rows, _ := pool.Query(context.Background(), `SELECT id,title,slug,body,price_cents,kind FROM products WHERE active=true ORDER BY id DESC`)
 	var list []map[string]any
 	for rows.Next() {
@@ -797,7 +855,15 @@ func (s *Server) shop(w http.ResponseWriter, r *http.Request) {
 		list = append(list, map[string]any{"ID": id, "Title": t, "Slug": sl, "Body": body, "Price": fmt.Sprintf("%.2f", float64(pc)/100), "Kind": k})
 	}
 	rows.Close()
-	p.Data = list
+	depts := []map[string]any{}
+	dr, _ := pool.Query(context.Background(), `SELECT name,slug FROM departments ORDER BY name`)
+	for dr.Next() {
+		var n, sl string
+		_ = dr.Scan(&n, &sl)
+		depts = append(depts, map[string]any{"Name": n, "Slug": sl})
+	}
+	dr.Close()
+	p.Data = map[string]any{"Products": list, "Depts": depts}
 	s.render(w, "shop.html", p)
 }
 
@@ -913,6 +979,35 @@ func (s *Server) pub(w http.ResponseWriter, r *http.Request) {
 		s.home(w, r)
 		return
 	}
+	if pth == "contact" || strings.HasPrefix(pth, "contact/") {
+		slug := strings.TrimPrefix(pth, "contact/")
+		if slug == "" || slug == "contact" {
+			pool, _ := s.db()
+			_ = pool.QueryRow(context.Background(), `SELECT slug FROM forms ORDER BY id LIMIT 1`).Scan(&slug)
+		}
+		s.pubForm(w, r, slug)
+		return
+	}
+	if strings.HasPrefix(pth, "book/") {
+		s.pubCal(w, r, strings.TrimPrefix(pth, "book/"))
+		return
+	}
+	if strings.HasPrefix(pth, "cal/") && strings.HasSuffix(pth, ".ics") {
+		s.ics(w, r, strings.TrimSuffix(strings.TrimPrefix(pth, "cal/"), ".ics"))
+		return
+	}
+	if strings.HasPrefix(pth, "shop/d/") {
+		s.deptPage(w, r, strings.TrimPrefix(pth, "shop/d/"))
+		return
+	}
+	if strings.HasPrefix(pth, "shop/i/") {
+		s.catalogPage(w, r, strings.TrimPrefix(pth, "shop/i/"))
+		return
+	}
+	if strings.HasPrefix(pth, "shop/") && pth != "shop" {
+		s.productPage(w, r, strings.TrimPrefix(pth, "shop/"))
+		return
+	}
 	if strings.HasPrefix(pth, "p/") {
 		s.piece(w, r, strings.TrimPrefix(pth, "p/"))
 		return
@@ -925,11 +1020,32 @@ func (s *Server) pub(w http.ResponseWriter, r *http.Request) {
 		s.bio(w, r, strings.TrimPrefix(pth, "@"))
 		return
 	}
+	parts := strings.Split(pth, "/")
+	if len(parts) >= 2 {
+		// /scroll/item  or  /handle/scroll/item
+		if s.cfg.Multi() && len(parts) == 3 {
+			s.pubScroll(w, r, parts[1], parts[2])
+			return
+		}
+		if len(parts) == 2 {
+			var n int
+			pool, _ := s.db()
+			_ = pool.QueryRow(context.Background(), `SELECT 1 FROM scrolls WHERE slug=$1 AND status='live'`, parts[0]).Scan(&n)
+			if n == 1 {
+				s.pubScroll(w, r, parts[0], parts[1])
+				return
+			}
+			_ = pool.QueryRow(context.Background(), `SELECT 1 FROM forms WHERE slug=$1`, parts[0]).Scan(&n)
+			if n == 1 {
+				s.pubForm(w, r, parts[0])
+				return
+			}
+		}
+	}
 	if s.cfg.Multi() && !strings.Contains(pth, "/") {
 		s.authorBlog(w, r, pth)
 		return
 	}
-	// page by slug
 	s.piece(w, r, pth)
 }
 
@@ -955,21 +1071,69 @@ func (s *Server) home(w http.ResponseWriter, r *http.Request) {
 func (s *Server) piece(w http.ResponseWriter, r *http.Request, slug string) {
 	pool, _ := s.db()
 	var id int64
-	var title, pslug, content, excerpt, featPlace, featImg, featAud, featVid, name, handle, when, sname, sslug string
+	var title, pslug, content, excerpt, featPlace, featImg, featAud, featVid, name, handle, when, sname, sslug, typ, landing, seot, seod, seoi string
+	var min int
 	err := pool.QueryRow(context.Background(),
 		`SELECT p.id,p.title,p.slug,p.content,p.excerpt,p.feat_place,coalesce(p.feat_img,''),coalesce(p.feat_aud,''),coalesce(p.feat_vid,''),
-		        u.name,coalesce(u.handle,''),coalesce(p.published_at::text,''),coalesce(ser.name,''),coalesce(ser.slug,'')
+		        u.name,coalesce(u.handle,''),coalesce(p.published_at::text,''),coalesce(ser.name,''),coalesce(ser.slug,''),
+		        p.type, coalesce(p.landing::text,''), p.min_tier, coalesce(p.seo_title,''), coalesce(p.seo_desc,''), coalesce(p.seo_image,'')
 		 FROM pieces p JOIN users u ON u.id=p.author_id LEFT JOIN series ser ON ser.id=p.series_id
 		 WHERE p.slug=$1 AND p.status='live'`, slug).Scan(
-		&id, &title, &pslug, &content, &excerpt, &featPlace, &featImg, &featAud, &featVid, &name, &handle, &when, &sname, &sslug)
+		&id, &title, &pslug, &content, &excerpt, &featPlace, &featImg, &featAud, &featVid, &name, &handle, &when, &sname, &sslug,
+		&typ, &landing, &min, &seot, &seod, &seoi)
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
-	row := map[string]any{"ID": id, "Title": title, "Slug": pslug, "Content": template.HTML(content), "Excerpt": excerpt, "FeatPlace": featPlace, "FeatImg": featImg, "FeatAud": featAud, "FeatVid": featVid, "Name": name, "Handle": handle, "When": when, "Series": sname, "SeriesSlug": sslug}
+	if !s.gate(w, r, min, title) {
+		return
+	}
+	place := "post"
+	if typ == "page" {
+		place = "page"
+	}
+	if typ == "landing" {
+		place = "landing"
+	}
+	row := map[string]any{"ID": id, "Title": title, "Slug": pslug, "Content": template.HTML(content), "Excerpt": excerpt, "FeatPlace": featPlace, "FeatImg": featImg, "FeatAud": featAud, "FeatVid": featVid, "Name": name, "Handle": handle, "When": when, "Series": sname, "SeriesSlug": sslug, "Type": typ, "Landing": landing}
 	p := s.base(r, title)
+	s.decorate(&p, place)
+	p.SEOTitle, p.SEODesc, p.SEOImage = seot, seod, seoi
+	p.Canonical = strings.TrimRight(s.cfg.URL, "/") + "/" + pslug
 	p.Data = row
+	if typ == "landing" {
+		s.render(w, "landing.html", p)
+		return
+	}
 	s.render(w, "piece.html", p)
+}
+
+func (s *Server) ajaxLanding(w http.ResponseWriter, r *http.Request) {
+	if s.need(w, r, "author", "admin") == nil {
+		return
+	}
+	n, _ := strconv.Atoi(r.URL.Query().Get("n"))
+	if n < 1 {
+		n = 1
+	}
+	if n > 7 {
+		n = 7
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	for i := 0; i < n; i++ {
+		fmt.Fprintf(w, `<fieldset class="col-ed" data-i="%d">
+<legend>Column %d</legend>
+<p><label>Header <input name="col_header_%d"></label>
+<label>Button <input name="col_button_%d"></label>
+<label>Link <input name="col_href_%d" placeholder="/shop or /book/consult"></label></p>
+<p><label>Logo URL <input name="col_logo_%d"></label>
+<label>Background <input name="col_bg_%d" placeholder="#1a1a1a or linear-gradient(...) or /media/..."></label></p>
+<p><textarea name="col_text_%d" placeholder="Text"></textarea></p>
+<p><label>CTA
+<select name="col_cta_%d"><option value="link">link</option><option value="product">product</option><option value="membership">membership</option><option value="contact">contact</option><option value="book">%s</option></select>
+</label></p>
+</fieldset>`, i, i+1, i, i, i, i, i, i, i, s.bookWord())
+	}
 }
 
 func (s *Server) bio(w http.ResponseWriter, r *http.Request, handle string) {

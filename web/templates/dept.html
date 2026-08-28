@@ -1,0 +1,9 @@
+{{template "head" .}}
+<h1>{{index .Data "Name"}}</h1>
+<p>{{index .Data "Descr"}}</p>
+<div class="deck">
+{{range index .Data "Products"}}
+<article class="card"><h2><a href="/shop/{{.Slug}}">{{.Title}}</a></h2><p class="price">${{.Price}}</p></article>
+{{end}}
+</div>
+{{template "foot" .}}

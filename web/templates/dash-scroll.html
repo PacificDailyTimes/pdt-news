@@ -1,0 +1,27 @@
+{{template "head" .}}
+<div class="dash">
+<nav class="tabs"><a href="/dash">Home</a><a href="/dash/scroll">Scroll-thru</a></nav>
+<h1>Scroll-thru</h1>
+<p class="hint">Stack pages, landings, and contact forms. Public URL <code>/{scroll}/{item}</code> (network: <code>/{handle}/{scroll}/{item}</code>). The path changes as you scroll.</p>
+<form method="post">
+<input type="hidden" name="id" value="{{index .Data.Cur "ID"}}">
+<p><label>Title <input name="title" required value="{{index .Data.Cur "Title"}}"></label>
+<label>Slug <input name="slug" value="{{index .Data.Cur "Slug"}}"></label>
+<label>Status <select name="status"><option>draft</option><option {{if eq (index .Data.Cur "Status") "live"}}selected{{end}}>live</option></select></label>
+<label>Min tier <input name="min_tier" size="3" value="{{index .Data.Cur "Min"}}"></label></p>
+<p><button class="btn">Save scroll</button></p>
+{{if index .Data.Cur "ID"}}
+<p><label>Add piece
+<select name="add_piece"><option value="">—</option>{{range .Data.Pieces}}<option value="{{.ID}}">{{.Title}} ({{.Type}})</option>{{end}}</select>
+</label>
+<label>or form
+<select name="add_form"><option value="">—</option>{{range .Data.Forms}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select>
+</label>
+<label>item slug <input name="item_slug" size="12"></label>
+<button class="btn ghost">Add</button></p>
+<ol>{{range .Data.Items}}<li>{{.Slug}}</li>{{end}}</ol>
+{{end}}
+</form>
+<ul class="plain">{{range .Data.List}}<li><a href="/dash/scroll?id={{.ID}}">{{.Title}}</a> · {{.Status}} · /{{.Slug}}/</li>{{end}}</ul>
+</div>
+{{template "foot" .}}

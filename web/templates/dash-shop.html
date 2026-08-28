@@ -1,23 +1,28 @@
 {{template "head" .}}
 <div class="dash">
-<nav class="tabs"><a href="/dash">Home</a><a href="/dash/shop">Products</a></nav>
+<nav class="tabs"><a href="/dash">Home</a><a href="/dash/shop">Products</a><a href="/dash/dept">Departments</a><a href="/dash/catalog">Indexes</a></nav>
 <h1>Products</h1>
 <form method="post">
-<p><label>Title <input name="title" required></label> <label>Price USD <input name="price" value="0"></label></p>
+<p><label>Title <input name="title" required></label> <label>Price USD <input name="price" value="0"></label>
+<label>Stock <input name="stock" size="4"></label></p>
 <p><label>Kind <select name="kind">
 <option value="physical">physical</option>
 <option value="virtual">virtual</option>
 <option value="subscription">subscription (ship or access on a beat)</option>
 <option value="membership">membership (access; Stripe/PayPal renew, crypto prepaid)</option>
-</select></label></p>
+</select></label>
+<label>Department <select name="department_id"><option value="0">—</option>{{range .Data.Depts}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></label>
+<label>Min tier <input name="min_tier" value="0" size="3"></label></p>
 <p><label>Every <input name="interval_n" value="1" size="3">
 <select name="interval_unit"><option>day</option><option>week</option><option selected>month</option><option>year</option></select></label>
 <label><input type="checkbox" name="ship" value="1"> ships</label></p>
 <p><label>Virtual URL <input name="virtual_url"></label></p>
 <p><textarea name="body" placeholder="Description"></textarea></p>
-<p class="hint">Subscription: buyer picks a start date and an optional skip-until. Next ship is start, then every N units. No 12-field Woo maze.</p>
+<p><label>Features JSON
+<input name="features" size="70" placeholder='[{"name":"Color","input":"menu","options":[{"v":"Red","ok":true},{"v":"Blue","ok":false}]},{"name":"Size","input":"select","options":[{"v":"S","ok":true},{"v":"M","ok":true}]}]'></label></p>
+<p class="hint"><code>input</code> is <code>menu</code> (Amazon swatches: selected, gray, slash if not ok) or <code>select</code> (dropdown). One shape for color, size, material, style.</p>
 <p><button class="btn">Save product</button></p>
 </form>
-<ul class="plain">{{range .Data}}<li>{{.Title}} · ${{.Price}} · {{.Kind}}</li>{{end}}</ul>
+<ul class="plain">{{range .Data.List}}<li><a href="/shop/{{.Slug}}">{{.Title}}</a> · ${{.Price}} · {{.Kind}}</li>{{end}}</ul>
 </div>
 {{template "foot" .}}

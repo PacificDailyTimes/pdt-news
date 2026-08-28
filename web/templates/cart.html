@@ -1,0 +1,37 @@
+{{template "head" .}}
+<h1>Cart</h1>
+<table class="grid">
+<tr><th>Item</th><th>Qty</th><th></th></tr>
+{{range index .Data "Items"}}
+<tr {{if .Later}}class="later"{{end}}>
+  <td><a href="/shop/{{.Slug}}">{{.Title}}</a> ${{.Price}}{{if .Fav}} ★{{end}}</td>
+  <td>
+    <form method="post" style="display:inline"><input type="hidden" name="item" value="{{.ID}}">
+    <input name="qty" value="{{.Qty}}" size="2">
+    <button name="act" value="qty">Update</button></form>
+  </td>
+  <td>
+    <form method="post" style="display:inline"><input type="hidden" name="item" value="{{.ID}}">
+    {{if .Later}}<button name="act" value="back">Back to cart</button>{{else}}<button name="act" value="later">Save for later</button>{{end}}
+    <button name="act" value="fav">Favorite</button>
+    <button name="act" value="remove">Remove</button>
+    </form>
+  </td>
+</tr>
+{{else}}<tr><td colspan="3">Empty.</td></tr>{{end}}
+</table>
+<p class="price">Total ${{index .Data "Total"}}</p>
+<form method="post">
+<input type="hidden" name="act" value="checkout">
+<p><label>Email <input type="email" name="email"></label>
+<label>State <input name="state" size="2"></label>
+<label>ZIP <input name="zip" size="8"></label>
+<label>Pay <select name="pay_via">
+  <option value="invoice">invoice</option>
+  <option value="stripe">Stripe</option>
+  <option value="paypal">PayPal</option>
+  <option value="crypto">crypto (prepaid)</option>
+</select></label>
+<button class="btn">Checkout</button></p>
+</form>
+{{template "foot" .}}

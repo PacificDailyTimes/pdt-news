@@ -1,0 +1,16 @@
+{{template "head" .}}
+<article class="scroll-thru" data-base="/{{index .Data "Slug"}}">
+{{range index .Data "Items"}}
+  <section class="scroll-page" id="{{.Slug}}" data-slug="{{.Slug}}">
+    <h1>{{.Title}}</h1>
+    {{if eq .Type "landing"}}
+      <div class="land-render" data-json="{{.Landing}}"></div>
+    {{else}}
+      <div class="prose">{{.Content}}</div>
+    {{end}}
+  </section>
+{{end}}
+</article>
+<script src="/static/js/land-pub.js"></script>
+<script src="/static/js/scroll.js"></script>
+{{template "foot" .}}

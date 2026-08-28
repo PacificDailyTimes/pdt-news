@@ -1,0 +1,22 @@
+{{template "head" .}}
+<div class="slim">
+<h1>{{index .Data "Name"}}</h1>
+<p class="hint">Pick a {{index .Data "Word"}} slot. Taken times from this calendar plus the iCal/Google/CalDAV feed are already gone.</p>
+<form method="get">
+<p><label>Day <input type="date" name="day" value="{{index .Data "Day"}}"></label> <button class="btn ghost">Show</button></p>
+</form>
+<form method="post">
+<input type="hidden" name="day" value="{{index .Data "Day"}}">
+<p>{{range index .Data "Slots"}}
+<label class="slot"><input type="radio" name="slot" value="{{.}}" required> {{.}}</label>
+{{else}}<span class="hint">No open slots this day.</span>{{end}}</p>
+<p><label>Email <input type="email" name="email"></label></p>
+<p><label>Note <input name="note"></label></p>
+{{if index .Data "NeedPay"}}
+<p><label>Pay <select name="pay_via"><option value="invoice">invoice</option><option value="stripe">Stripe</option><option value="paypal">PayPal</option><option value="crypto">crypto</option></select></label></p>
+{{end}}
+<p><button class="btn">Book {{index .Data "Word"}}</button></p>
+</form>
+<p class="hint"><a href="/cal/{{index .Data "Slug"}}.ics">Subscribe (iCal)</a></p>
+</div>
+{{template "foot" .}}

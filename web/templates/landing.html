@@ -1,0 +1,7 @@
+{{template "head" .}}
+<article class="landing" id="landing">
+  <h1>{{index .Data "Title"}}</h1>
+  <div id="land-render" data-json="{{index .Data "Landing"}}"></div>
+</article>
+<script src="/static/js/land-pub.js"></script>
+{{template "foot" .}}
