@@ -215,3 +215,37 @@ CREATE TABLE IF NOT EXISTS entitlements (
   source TEXT NOT NULL DEFAULT 'purchase',
   PRIMARY KEY (user_id, product_id)
 );
+
+CREATE TABLE IF NOT EXISTS oauth_identities (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  email TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (provider, subject)
+);
+
+CREATE TABLE IF NOT EXISTS oauth_codes (
+  code TEXT PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  client_id TEXT NOT NULL,
+  redirect TEXT NOT NULL,
+  expires TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS oauth_tokens (
+  token TEXT PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  client_id TEXT NOT NULL,
+  expires TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS badad_links (
+  user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  badad_user TEXT,
+  pub_key TEXT,
+  sec_key TEXT,
+  linked_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+

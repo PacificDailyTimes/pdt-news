@@ -6,14 +6,14 @@ GPLv3. PostgreSQL. Nginx in front of `127.0.0.1:9001`.
 
 ## Two modes (`mode=` in config)
 
-| | single | multi |
+| | single | network |
 |---|---|---|
 | Front | `domain.tld` is the blog | `domain.tld` is the paper (aggregator) |
 | Bio | — | `domain.tld/@handle` |
 | Author blog | — | `domain.tld/handle` |
 | Login | **login ID**, never a URL | same |
 
-Subdomain author blogs (`handle.domain.tld`) wait on inkcert/inkdns wildcards. Not in this cut.
+Do not call this “multisite” or “multiauthor”. It is a **network**. Subdomain author blogs wait on inkcert.
 
 ## People
 

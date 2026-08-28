@@ -1,0 +1,17 @@
+{{template "head" .}}
+<div class="dash">
+<nav class="tabs"><a href="/dash">Home</a><a href="/dash/badad">badAd</a></nav>
+<h1>badAd</h1>
+<p class="hint">Native classified ads. Linked pdt ↔ badAd accounts mint developer keys on both sides. Unlinked: paste keys (SysAdmin config also works).</p>
+{{if .Data.Auto}}<p class="flash">Linked. Keys are managed automatically.</p>{{end}}
+{{if .Data.Pub}}
+<p>Public key <code>{{.Data.Pub}}</code></p>
+{{if not .Data.Auto}}<p>Secret key <code>{{.Data.Sec}}</code></p>{{end}}
+{{end}}
+<form method="post">
+{{if .Data.URL}}<p><button class="btn" name="link" value="1">Login / link with pdt at badAd</button></p>{{end}}
+<p><button class="btn ghost" name="mint" value="1">Mint keys now</button></p>
+</form>
+<p class="hint">Embed uses inherit color so the slot matches the paper theme.</p>
+</div>
+{{template "foot" .}}

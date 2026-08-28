@@ -65,5 +65,12 @@
       if (d.hidden) dock(); else d.hidden = true;
     };
     window.addEventListener("resize", apply);
+    document.querySelectorAll("[data-badad]").forEach(function (el) {
+      var src = "/static/js/badad-embed.js";
+      var s = document.createElement("script");
+      s.src = src;
+      s.async = true;
+      document.body.appendChild(s);
+    });
   });
 })();

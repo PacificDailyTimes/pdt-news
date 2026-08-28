@@ -15,6 +15,7 @@
       {{if index .Data "FeatVid"}}<p class="feat"><video controls src="{{index .Data "FeatVid"}}"></video></p>{{end}}
     {{end}}
     <div class="prose" id="prose">{{index .Data "Content"}}</div>
+    <aside class="badad-slot" data-badad="1"></aside>
     {{if eq (index .Data "FeatPlace") "bottom"}}
       {{if index .Data "FeatImg"}}<p class="feat"><img src="{{index .Data "FeatImg"}}" alt=""></p>{{end}}
       {{if index .Data "FeatAud"}}<p class="feat"><audio controls src="{{index .Data "FeatAud"}}"></audio></p>{{end}}

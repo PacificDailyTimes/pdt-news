@@ -22,8 +22,8 @@ db_user=pdt
 db_pass=change-me
 
 # --- mode ---
-# single  = one blog at the host. No @handle, no /handle.
-# multi   = paper at host; /@handle bio; /handle author blog. Path only (subdomain later).
+# single   = one blog at the host. No @handle, no /handle.
+# network  = paper at host; /@handle bio; /handle author blog. Path only (subdomain later).
 mode=single
 
 # --- installer lock ---
@@ -72,3 +72,24 @@ mail_from_name=pdt-news
 
 # --- theme default ---
 theme=masthead
+
+# --- OAuth (SysAdmin). Empty = that provider is off.
+# Callbacks: {web_url}/auth/{google|apple|github}/callback
+# oauth_google_id=
+# oauth_google_secret=
+# oauth_apple_id=
+# oauth_apple_secret=
+# oauth_github_id=
+# oauth_github_secret=
+
+# pdt as an OAuth provider for badAd ("Login with pdt"):
+# oauth_client_id=badad
+# oauth_client_secret=change-me
+
+# --- native badAd ---
+# When accounts are linked, keys are minted on both sides and you do not paste them.
+# If not linked, paste pub/sec here (same as the WordPress plugin).
+# badad_url=https://badad.one
+# badad_pub=
+# badad_sec=
+

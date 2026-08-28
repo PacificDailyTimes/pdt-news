@@ -22,6 +22,11 @@ type Config struct {
 	Coins                                              map[string]Coin
 	Theme                                              string
 	Path                                               string
+	GoogleID, GoogleSecret                             string
+	AppleID, AppleSecret                               string
+	GithubID, GithubSecret                             string
+	OAuthClientID, OAuthClientSecret                   string
+	BadAdURL, BadAdPub, BadAdSec                       string
 }
 
 type Coin struct {
@@ -128,6 +133,28 @@ func Load(path string) (*Config, error) {
 			c.WalletDir = v
 		case "theme":
 			c.Theme = v
+		case "oauth_google_id":
+			c.GoogleID = v
+		case "oauth_google_secret":
+			c.GoogleSecret = v
+		case "oauth_apple_id":
+			c.AppleID = v
+		case "oauth_apple_secret":
+			c.AppleSecret = v
+		case "oauth_github_id":
+			c.GithubID = v
+		case "oauth_github_secret":
+			c.GithubSecret = v
+		case "oauth_client_id":
+			c.OAuthClientID = v
+		case "oauth_client_secret":
+			c.OAuthClientSecret = v
+		case "badad_url":
+			c.BadAdURL = strings.TrimRight(v, "/")
+		case "badad_pub":
+			c.BadAdPub = v
+		case "badad_sec":
+			c.BadAdSec = v
 		default:
 			if strings.HasSuffix(k, "_key") {
 				t := strings.TrimSuffix(k, "_key")
@@ -159,7 +186,7 @@ func (c *Config) Addr() string {
 	return c.Bind + ":" + c.Port
 }
 
-func (c *Config) Multi() bool { return c.Mode == "multi" }
+func (c *Config) Multi() bool { return c.Mode == "network" || c.Mode == "multi" }
 
 func (c *Config) SetupOK(given string) bool {
 	if c.SetupPassword == "" && c.SetupHash == "" {

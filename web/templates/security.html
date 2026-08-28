@@ -11,6 +11,11 @@
 {{else}}
 <form method="post"><button class="btn" name="totp_start" value="1">Set up authenticator</button></form>
 {{end}}
-<p class="hint">Email link is always available. Passkeys can be added in a later cut; TOTP ships now.</p>
+<p class="hint">Email link is always available. Authenticator and passkeys stay required options alongside Google, Apple, and GitHub.</p>
+<p>
+  <a class="btn ghost" href="/auth/google?link=1">Link Google</a>
+  <a class="btn ghost" href="/auth/apple?link=1">Link Apple</a>
+  <a class="btn ghost" href="/auth/github?link=1">Link GitHub</a>
+</p>
 </div>
 {{template "foot" .}}
