@@ -59,6 +59,36 @@ func StartURL(cfg *config.Config, provider, state, callback string) (string, err
 	}
 }
 
+func GoogleCalStart(cfg *config.Config, state, callback string) (string, error) {
+	if cfg.GoogleID == "" {
+		return "", fmt.Errorf("google oauth off")
+	}
+	q := url.Values{
+		"client_id":     {cfg.GoogleID},
+		"redirect_uri":  {callback},
+		"response_type": {"code"},
+		"scope":         {"https://www.googleapis.com/auth/calendar"},
+		"access_type":   {"offline"},
+		"prompt":        {"consent"},
+		"state":         {state},
+	}
+	return "https://accounts.google.com/o/oauth2/v2/auth?" + q.Encode(), nil
+}
+
+func GoogleExchange(cfg *config.Config, code, callback string) (access, refresh string, err error) {
+	tok, err := postForm("https://oauth2.googleapis.com/token", url.Values{
+		"code":          {code},
+		"client_id":     {cfg.GoogleID},
+		"client_secret": {cfg.GoogleSecret},
+		"redirect_uri":  {callback},
+		"grant_type":    {"authorization_code"},
+	})
+	if err != nil {
+		return "", "", err
+	}
+	return str(tok["access_token"]), str(tok["refresh_token"]), nil
+}
+
 func Finish(cfg *config.Config, provider, code, callback string) (*Profile, error) {
 	switch provider {
 	case "google":

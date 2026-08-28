@@ -30,6 +30,26 @@ func (s *Server) dashCal(w http.ResponseWriter, r *http.Request) {
 			s.dashCalSync(w, r)
 			return
 		}
+		if r.FormValue("act") == "event" {
+			cid, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+			start, end := parseLocal(r.FormValue("start")), parseLocal(r.FormValue("end"))
+			if end.IsZero() {
+				end = start.Add(30 * time.Minute)
+			}
+			ev, _ := s.loadConn(cid).Put(caldav.Event{
+				UID: r.FormValue("uid"), Href: r.FormValue("href"),
+				Summary: r.FormValue("title"), Start: start, End: end,
+			})
+			_ = ev
+			http.Redirect(w, r, "/dash/cal?id="+r.FormValue("id"), http.StatusSeeOther)
+			return
+		}
+		if r.FormValue("act") == "delete_event" {
+			cid, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+			_ = s.loadConn(cid).Delete(r.FormValue("href"))
+			http.Redirect(w, r, "/dash/cal?id="+r.FormValue("id"), http.StatusSeeOther)
+			return
+		}
 		var sid int64
 		_ = pool.QueryRow(context.Background(), `SELECT id FROM sites WHERE is_main=true`).Scan(&sid)
 		slot, _ := strconv.Atoi(val(r, "slot_min", "30"))
@@ -38,14 +58,30 @@ func (s *Server) dashCal(w http.ResponseWriter, r *http.Request) {
 		if win == "" {
 			win = `{"mon":[["09:00","17:00"]],"tue":[["09:00","17:00"]],"wed":[["09:00","17:00"]],"thu":[["09:00","17:00"]],"fri":[["09:00","17:00"]],"sat":[],"sun":[]}`
 		}
+		kind := val(r, "kind", "caldav")
+		davURL := r.FormValue("caldav_url")
+		davUser := r.FormValue("caldav_user")
+		davPass := r.FormValue("caldav_pass")
+		if kind == "apple" {
+			acc := caldav.Acc{URL: val(r, "caldav_url", "https://caldav.icloud.com/"), User: davUser, Pass: davPass}
+			if d, err := acc.Discover(); err == nil && d != "" {
+				davURL = d
+			}
+		}
+		if kind == "caldav" && davURL != "" && !strings.Contains(davURL, "/calendars/") {
+			acc := caldav.Acc{URL: davURL, User: davUser, Pass: davPass}
+			if d, err := acc.Discover(); err == nil && d != "" {
+				davURL = d
+			}
+		}
 		_, _ = pool.Exec(context.Background(),
-			`INSERT INTO calendars(site_id,name,slug,tz,slot_min,windows,ical_url,caldav_url,caldav_user,caldav_pass,min_tier,word,product_id)
-			 VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13)`,
+			`INSERT INTO calendars(site_id,name,slug,tz,slot_min,windows,ical_url,caldav_url,caldav_user,caldav_pass,min_tier,word,product_id,kind)
+			 VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14)`,
 			sid, r.FormValue("name"), slugify(val(r, "slug", r.FormValue("name"))),
 			val(r, "tz", "America/Detroit"), slot, win, nullStr(r.FormValue("ical_url")),
-			nullStr(r.FormValue("caldav_url")), nullStr(r.FormValue("caldav_user")), nullStr(r.FormValue("caldav_pass")),
+			nullStr(davURL), nullStr(davUser), nullStr(davPass),
 			min, val(r, "word", s.bookWord()),
-			nullInt(r.FormValue("product_id")))
+			nullInt(r.FormValue("product_id")), kind)
 		if r.FormValue("book_word") != "" {
 			_, _ = pool.Exec(context.Background(), `UPDATE sites SET book_word=$1 WHERE is_main=true`, r.FormValue("book_word"))
 		}
@@ -54,17 +90,33 @@ func (s *Server) dashCal(w http.ResponseWriter, r *http.Request) {
 	}
 	p := s.base(r, s.bookWord())
 	s.decorate(&p, "")
-	rows, _ := pool.Query(context.Background(), `SELECT id,name,slug,slot_min,word FROM calendars ORDER BY id`)
+	rows, _ := pool.Query(context.Background(), `SELECT id,name,slug,slot_min,word,coalesce(kind,'caldav') FROM calendars ORDER BY id`)
 	var list []map[string]any
 	for rows.Next() {
 		var id int64
-		var n, sl, word string
+		var n, sl, word, kind string
 		var slot int
-		_ = rows.Scan(&id, &n, &sl, &slot, &word)
-		list = append(list, map[string]any{"ID": id, "Name": n, "Slug": sl, "Slot": slot, "Word": word})
+		_ = rows.Scan(&id, &n, &sl, &slot, &word, &kind)
+		list = append(list, map[string]any{"ID": id, "Name": n, "Slug": sl, "Slot": slot, "Word": word, "Kind": kind})
 	}
 	rows.Close()
-	p.Data = list
+	data := map[string]any{"Cals": list, "GoogleOn": s.cfg.GoogleID != ""}
+	if qid := r.URL.Query().Get("id"); qid != "" {
+		cid, _ := strconv.ParseInt(qid, 10, 64)
+		s.remoteSync(cid)
+		from := time.Now().Add(-12 * time.Hour)
+		to := time.Now().Add(14 * 24 * time.Hour)
+		var evs []map[string]any
+		for _, e := range s.loadConn(cid).List(from, to) {
+			evs = append(evs, map[string]any{
+				"Title": e.Summary, "Start": e.Start.Local().Format("Mon 2 Jan 15:04"),
+				"End": e.End.Local().Format("15:04"), "Href": e.Href, "UID": e.UID,
+			})
+		}
+		data["Open"] = qid
+		data["Events"] = evs
+	}
+	p.Data = data
 	s.render(w, "dash-cal.html", p)
 }
 
@@ -96,12 +148,9 @@ func (s *Server) pubCal(w http.ResponseWriter, r *http.Request, slug string) {
 	var slot, min int
 	var ical *string
 	var pid *int64
-	acc := caldav.Acc{}
 	err := pool.QueryRow(context.Background(),
-		`SELECT id,name,tz,slot_min,windows::text,ical_url,min_tier,word,product_id,
-		        coalesce(caldav_url,''),coalesce(caldav_user,''),coalesce(caldav_pass,'')
-		 FROM calendars WHERE slug=$1`, slug).
-		Scan(&id, &name, &tz, &slot, &win, &ical, &min, &word, &pid, &acc.URL, &acc.User, &acc.Pass)
+		`SELECT id,name,tz,slot_min,windows::text,ical_url,min_tier,word,product_id FROM calendars WHERE slug=$1`, slug).
+		Scan(&id, &name, &tz, &slot, &win, &ical, &min, &word, &pid)
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -109,8 +158,9 @@ func (s *Server) pubCal(w http.ResponseWriter, r *http.Request, slug string) {
 	if !s.gate(w, r, min, name) {
 		return
 	}
-	s.caldavSync(id, acc)
-	busy := s.busyTimes(id, ical, acc)
+	s.remoteSync(id)
+	conn := s.loadConn(id)
+	busy := s.busyTimes(id, ical, conn)
 	if r.Method == http.MethodPost {
 		_ = r.ParseForm()
 		u := s.user(r)
@@ -165,8 +215,8 @@ func (s *Server) pubCal(w http.ResponseWriter, r *http.Request, slug string) {
 			}
 		}
 		_, _ = pool.Exec(context.Background(), `UPDATE bookings SET status='booked' WHERE id=$1`, bid)
-		if acc.URL != "" {
-			ev, err := acc.Put(caldav.Event{
+		if conn.kind != "" || conn.dav.URL != "" || conn.g != nil {
+			ev, err := conn.Put(caldav.Event{
 				UID:     fmt.Sprintf("pdt-%d@pdt", bid),
 				Start:   start,
 				End:     end,
@@ -218,74 +268,17 @@ func (s *Server) ics(w http.ResponseWriter, r *http.Request, slug string) {
 	fmt.Fprint(w, "END:VCALENDAR\r\n")
 }
 
-func (s *Server) caldavSync(calID int64, acc caldav.Acc) {
-	if acc.URL == "" {
-		return
-	}
-	pool, err := s.db()
-	if err != nil {
-		return
-	}
-	from := time.Now().Add(-24 * time.Hour)
-	to := time.Now().Add(90 * 24 * time.Hour)
-	remote := acc.List(from, to)
-	seen := map[string]caldav.Event{}
-	for _, e := range remote {
-		if e.UID == "" {
-			continue
-		}
-		seen[e.UID] = e
-		bid := pdtBookingID(e.UID)
-		if bid < 1 {
-			continue
-		}
-		_, _ = pool.Exec(context.Background(),
-			`UPDATE bookings SET starts=$1, ends=$2, caldav_href=$3, caldav_etag=$4, status='booked'
-			 WHERE id=$5 AND calendar_id=$6 AND status IN ('booked','held','cancelled')`,
-			e.Start, e.End, e.Href, e.ETag, bid, calID)
-	}
-	rows, _ := pool.Query(context.Background(),
-		`SELECT id, coalesce(caldav_uid,'') FROM bookings
-		 WHERE calendar_id=$1 AND status IN ('booked','held') AND coalesce(caldav_uid,'') <> ''`, calID)
-	defer rows.Close()
-	for rows.Next() {
-		var id int64
-		var uid string
-		if rows.Scan(&id, &uid) != nil {
-			continue
-		}
-		if _, ok := seen[uid]; !ok {
-			_, _ = pool.Exec(context.Background(), `UPDATE bookings SET status='cancelled' WHERE id=$1`, id)
-		}
-	}
-}
-
-func pdtBookingID(uid string) int64 {
-	u := strings.TrimSpace(uid)
-	u = strings.TrimSuffix(u, "@pdt")
-	if !strings.HasPrefix(u, "pdt-") {
-		return 0
-	}
-	n, _ := strconv.ParseInt(strings.TrimPrefix(u, "pdt-"), 10, 64)
-	return n
-}
-
 func (s *Server) dashCalSync(w http.ResponseWriter, r *http.Request) {
 	u := s.need(w, r, "admin", "author")
 	if u == nil {
 		return
 	}
 	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
-	pool, _ := s.db()
-	acc := caldav.Acc{}
-	_ = pool.QueryRow(context.Background(),
-		`SELECT coalesce(caldav_url,''),coalesce(caldav_user,''),coalesce(caldav_pass,'') FROM calendars WHERE id=$1`, id).
-		Scan(&acc.URL, &acc.User, &acc.Pass)
-	s.caldavSync(id, acc)
-	http.Redirect(w, r, "/dash/cal", http.StatusSeeOther)
+	s.remoteSync(id)
+	http.Redirect(w, r, "/dash/cal?id="+r.FormValue("id"), http.StatusSeeOther)
 }
 
-func (s *Server) busyTimes(calID int64, ical *string, acc caldav.Acc) [][2]time.Time {
+func (s *Server) busyTimes(calID int64, ical *string, c calConn) [][2]time.Time {
 	var out [][2]time.Time
 	pool, _ := s.db()
 	rows, _ := pool.Query(context.Background(),
@@ -301,7 +294,9 @@ func (s *Server) busyTimes(calID int64, ical *string, acc caldav.Acc) [][2]time.
 	}
 	from := time.Now().Add(-24 * time.Hour)
 	to := time.Now().Add(60 * 24 * time.Hour)
-	out = append(out, acc.Busy(from, to)...)
+	for _, e := range c.List(from, to) {
+		out = append(out, [2]time.Time{e.Start, e.End})
+	}
 	return out
 }
 

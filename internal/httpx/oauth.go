@@ -27,7 +27,14 @@ func (s *Server) authStart(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, &http.Cookie{Name: "pdt_oauth_link", Value: "1", Path: "/", HttpOnly: true, MaxAge: 600})
 	}
 	cb := strings.TrimRight(s.cfg.URL, "/") + "/auth/" + p + "/callback"
-	u, err := oauth.StartURL(s.cfg, p, st, cb)
+	var u string
+	var err error
+	if r.URL.Query().Get("cal") == "1" {
+		http.SetCookie(w, &http.Cookie{Name: "pdt_oauth_cal", Value: "1", Path: "/", HttpOnly: true, MaxAge: 600})
+		u, err = oauth.GoogleCalStart(s.cfg, st, cb)
+	} else {
+		u, err = oauth.StartURL(s.cfg, p, st, cb)
+	}
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -42,6 +49,11 @@ func (s *Server) authCallback(w http.ResponseWriter, r *http.Request, provider s
 		return
 	}
 	cb := strings.TrimRight(s.cfg.URL, "/") + "/auth/" + provider + "/callback"
+	if lc, err := r.Cookie("pdt_oauth_cal"); err == nil && lc.Value == "1" {
+		http.SetCookie(w, &http.Cookie{Name: "pdt_oauth_cal", Value: "", Path: "/", MaxAge: -1})
+		s.googleCalCallback(w, r, cb)
+		return
+	}
 	prof, err := oauth.Finish(s.cfg, provider, r.URL.Query().Get("code"), cb)
 	if err != nil || prof == nil || prof.Subject == "" {
 		http.Error(w, "oauth failed", 400)

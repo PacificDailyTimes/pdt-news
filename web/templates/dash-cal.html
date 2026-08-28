@@ -1,26 +1,81 @@
 {{template "head" .}}
 <div class="dash">
 <nav class="tabs"><a href="/dash">Home</a><a href="/dash/cal">{{.BookWord}}</a></nav>
-<h1>{{.BookWord}}</h1>
-<p class="hint">Same model as your phone: iOS/Android Calendar (or DAVx⁵) talks to Nextcloud/ownCloud. pdt-news talks to that <em>same</em> collection. We are another client, not a CalDAV host. Book on the site → it shows on the phone. Drag or delete on the phone → we pick it up on the next view (or Sync). Collection URL looks like <code>https://cloud.example/remote.php/dav/calendars/USER/personal/</code>. Use an app password.</p>
+<h1>Calendars</h1>
+<p class="hint">pdt-news is a calendar <em>client</em>, same job as iOS Calendar or DAVx⁵. The host is Apple iCloud, Google Calendar, or your CalDAV (Nextcloud/ownCloud/Fastmail). Bookings and events live on that host. Phones already connected to it see everything.</p>
+
+<h2>Connect</h2>
+<p>{{if index .Data "GoogleOn"}}<a class="btn theme-cta" href="/auth/google?cal=1">Connect Google Calendar</a>{{else}}<span class="hint">Set oauth_google_id / oauth_google_secret in config to connect Google.</span>{{end}}</p>
+
 <form method="post">
+<input type="hidden" name="kind" value="apple">
+<p><b>Apple iCloud</b> — Apple ID + app-specific password. We discover the calendar collection.</p>
+<p><label>Name <input name="name" value="iCloud"></label>
+<label>Apple ID <input name="caldav_user" placeholder="you@icloud.com"></label>
+<label>App password <input type="password" name="caldav_pass" autocomplete="off"></label>
+<button class="btn">Connect Apple</button></p>
+</form>
+
+<form method="post">
+<input type="hidden" name="kind" value="caldav">
+<p><b>CalDAV</b> — Nextcloud, ownCloud, Fastmail. Collection URL, or the host and we discover.</p>
+<p><label>Name <input name="name" value="CalDAV"></label>
+<label>URL <input name="caldav_url" placeholder="https://cloud.example/remote.php/dav/calendars/USER/personal/"></label>
+<label>User <input name="caldav_user"></label>
+<label>Password <input type="password" name="caldav_pass" autocomplete="off"></label>
+<button class="btn">Connect CalDAV</button></p>
+</form>
+
+<form method="post">
+<input type="hidden" name="kind" value="caldav">
+<p><b>{{.BookWord}} desk</b> — slot window for public booking on a connected calendar.</p>
 <p><label>Name <input name="name" required></label>
 <label>Slug <input name="slug"></label>
 <label>Slot minutes <input name="slot_min" value="30" size="4"></label>
-<label>Timezone <input name="tz" value="America/Detroit"></label></p>
-<p><label>Word on this calendar <select name="word"><option>appointment</option><option>reservation</option></select></label>
-<label>Site-wide word <select name="book_word"><option>appointment</option><option>reservation</option></select></label>
+<label>Timezone <input name="tz" value="America/Detroit"></label>
+<label>Word <select name="word"><option>appointment</option><option>reservation</option></select></label>
 <label>Min tier <input name="min_tier" value="0" size="3"></label></p>
-<p><label>iCal / Google secret URL <input name="ical_url" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"></label></p>
-<p><label>CalDAV collection URL <input name="caldav_url" placeholder="https://caldav.example/…/calendars/user/home/"></label>
-<label>CalDAV user <input name="caldav_user"></label>
-<label>CalDAV password <input type="password" name="caldav_pass" autocomplete="off"></label></p>
-<p class="hint">CalDAV URL is the calendar collection, not the account home. App-password, not the login password, for iCloud/Google/Fastmail.</p>
-<p><label>Windows JSON <input name="windows" size="60" placeholder='{"mon":[["09:00","17:00"]],…}'></label></p>
-<p><button class="btn">Save calendar</button></p>
+<p><label>iCal URL <input name="ical_url" placeholder="optional read-only feed"></label>
+<label>CalDAV URL <input name="caldav_url"></label>
+<label>User <input name="caldav_user"></label>
+<label>Password <input type="password" name="caldav_pass" autocomplete="off"></label></p>
+<p><label>Windows JSON <input name="windows" size="50" placeholder='{"mon":[["09:00","17:00"]],…}'></label>
+<button class="btn">Save desk</button></p>
 </form>
-<ul class="plain">{{range .Data}}<li>{{.Name}} · {{.Slot}} min · /book/{{.Slug}} · /cal/{{.Slug}}.ics
+
+<h2>Connected</h2>
+<ul class="plain">{{range index .Data "Cals"}}<li>
+  <a href="/dash/cal?id={{.ID}}">{{.Name}}</a> · {{.Kind}} · /book/{{.Slug}} · /cal/{{.Slug}}.ics
   <form method="post" style="display:inline"><input type="hidden" name="act" value="sync"><input type="hidden" name="id" value="{{.ID}}"><button class="btn ghost">Sync</button></form>
 </li>{{end}}</ul>
+
+{{if index .Data "Open"}}
+<h2>Agenda</h2>
+<table class="grid">
+<tr><th>When</th><th>What</th><th></th></tr>
+{{range index .Data "Events"}}
+<tr>
+  <td>{{.Start}}–{{.End}}</td>
+  <td>{{.Title}}</td>
+  <td>
+    <form method="post" style="display:inline">
+      <input type="hidden" name="act" value="delete_event">
+      <input type="hidden" name="id" value="{{index $.Data "Open"}}">
+      <input type="hidden" name="href" value="{{.Href}}">
+      <button class="btn ghost">Delete</button>
+    </form>
+  </td>
+</tr>
+{{else}}<tr><td colspan="3">Empty window (14 days).</td></tr>{{end}}
+</table>
+<form method="post">
+<input type="hidden" name="act" value="event">
+<input type="hidden" name="id" value="{{index .Data "Open"}}">
+<p><label>Title <input name="title" required></label>
+<label>Start <input type="datetime-local" name="start" required></label>
+<label>End <input type="datetime-local" name="end"></label>
+<button class="btn theme-cta">Add event</button></p>
+</form>
+{{end}}
 </div>
 {{template "foot" .}}

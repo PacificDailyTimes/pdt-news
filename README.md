@@ -60,7 +60,8 @@ A membership can sit on a landing column next to a product. Same checkout.
 
 Site-wide word: **appointment** or **reservation**. Slot size + weekday windows.
 
-CalDAV is a **client**, like iOS Calendar or DAVx⁵. You already host Nextcloud/ownCloud (or Fastmail/iCloud). Paste that collection URL + app password. Bookings PUT onto it; phone moves/deletes come back on view or Dash → Sync. We do not host CalDAV. Subscribe feed remains `/cal/{slug}.ics`. Tiers and optional payment on the book.
+CalDAV is a **client**, like iOS Calendar or DAVx⁵. Connect **Apple iCloud** (Apple ID + app password, we discover the collection), **Google Calendar** (OAuth, `oauth_google_id` in config), or **CalDAV** (Nextcloud/ownCloud/Fastmail). Dash agenda can add/delete events on that host. Bookings PUT onto it; phone moves/deletes come back on view or Sync. We do not host CalDAV. Subscribe feed remains `/cal/{slug}.ics`.
+
 
 
 
