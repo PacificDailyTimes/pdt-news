@@ -43,7 +43,7 @@ Email **code + link** (default). Optional password. Authenticator (TOTP). Instal
 
 ## Money
 
-Stripe / PayPal keys in config or the admin dash. US destination tax from a state table. Invoices as a short email + PDF. Crypto addresses and **key files only in `/etc/pdt/wallet/`** (0700). Tarball installs still use that FHS path for keys.
+Stripe / PayPal keys in config or the admin dash. **Same three methods as badAd:** Stripe and PayPal do one-time **or** auto-renewing memberships/subscriptions; crypto is prepaid for one period and **never** renews. US destination tax from a state table. Invoices as a short email + PDF. Crypto addresses and **key files only in `/etc/pdt/wallet/`** (0700). Tarball installs still use that FHS path for keys.
 
 ## Install
 

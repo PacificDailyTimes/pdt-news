@@ -1,0 +1,18 @@
+{{template "head" .}}
+<div class="slim">
+<h1>Pay with crypto</h1>
+<p class="flash">{{index .Data "Hint"}}</p>
+<p>Amount due <b>${{index .Data "Total"}} USD</b> · order #{{index .Data "Order"}}</p>
+<ul class="plain">
+{{range index .Data "Coins"}}
+<li><b>{{.Ticker}}</b> <code>{{.Address}}</code></li>
+{{else}}<li>SysAdmin has not set coin addresses in config yet.</li>{{end}}
+</ul>
+<form method="post" action="/pay/crypto">
+<input type="hidden" name="order" value="{{index .Data "Order"}}">
+<p><label>Tx id / note <input name="txid"></label></p>
+<p><button class="btn">I’ve sent it</button></p>
+</form>
+<p class="hint">Admin confirms in Dash → Payments. Crypto never auto-renews.</p>
+</div>
+{{template "foot" .}}

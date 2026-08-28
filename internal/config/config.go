@@ -18,6 +18,8 @@ type Config struct {
 	SMTPHost, SMTPPort, SMTPUser, SMTPPass, SMTPSecure string
 	StripeSecret, StripePub                            string
 	PaypalID, PaypalSecret                             string
+	PaypalSandbox                                      bool
+	StripeWhsec                                        string
 	WalletDir                                          string
 	Coins                                              map[string]Coin
 	Theme                                              string
@@ -129,6 +131,10 @@ func Load(path string) (*Config, error) {
 			c.PaypalID = v
 		case "paypal_secret":
 			c.PaypalSecret = v
+		case "paypal_sandbox":
+			c.PaypalSandbox = v == "1" || strings.EqualFold(v, "true")
+		case "stripe_webhook_secret":
+			c.StripeWhsec = v
 		case "wallet_dir":
 			c.WalletDir = v
 		case "theme":

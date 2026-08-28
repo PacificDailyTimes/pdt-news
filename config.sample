@@ -46,10 +46,15 @@ mail_from_name=pdt-news
 # smtp_secure=tls
 
 # --- payments (also editable in the admin dash; env/config wins if set) ---
+# Same three methods as badAd: Stripe, PayPal, crypto.
+# Stripe/PayPal: one-time OR auto-renewing membership/subscription.
+# Crypto: prepaid period only. Never renews.
 # stripe_secret=
 # stripe_publishable=
+# stripe_webhook_secret=
 # paypal_client_id=
 # paypal_secret=
+# paypal_sandbox=false
 
 # --- crypto keys live ONLY under /etc/pdt/wallet/ (mode 0700, files 0600).
 # Tarball installs: the SysAdmin creates that directory on the FHS even if the app itself lives in a folder.

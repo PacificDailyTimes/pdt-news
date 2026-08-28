@@ -12,18 +12,22 @@
     <p><label>Email <input type="email" name="email" required></label></p>
     <p><label>State <input name="state" size="2" placeholder="MI"></label>
        <label>ZIP <input name="zip" size="10"></label></p>
-    {{if eq .Kind "subscription"}}
+    {{if or (eq .Kind "subscription") (eq .Kind "membership")}}
     <p><label>Start <input type="date" name="start_on"></label>
        <label>Skip until <input type="date" name="skip_until"></label></p>
+    <p class="hint">Stripe and PayPal can auto-renew. Crypto is prepaid for one period and never renews.</p>
     {{end}}
     <p><label>Pay
       <select name="pay_via">
         <option value="invoice">invoice (email + PDF)</option>
         <option value="stripe">Stripe</option>
         <option value="paypal">PayPal</option>
-        <option value="crypto">crypto</option>
+        <option value="crypto">crypto (prepaid, no renew)</option>
       </select>
     </label></p>
+    {{if or (eq .Kind "subscription") (eq .Kind "membership")}}
+    <p><label><input type="checkbox" name="renew" value="1" checked> auto-renew (ignored for crypto)</label></p>
+    {{end}}
     <p><button class="btn">Buy</button></p>
   </form>
 </article>

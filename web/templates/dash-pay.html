@@ -1,0 +1,16 @@
+{{template "head" .}}
+<div class="dash">
+<nav class="tabs"><a href="/dash">Home</a><a href="/dash/shop">Products</a><a href="/dash/wallet">Wallet</a><a href="/dash/pay">Payments</a></nav>
+<h1>Payments</h1>
+<p class="hint">Confirm crypto here. Stripe/PayPal land via webhook or return URL. Crypto never renews.</p>
+<ul class="plain">
+{{range .Data}}
+<li>#{{.ID}} · {{.Email}} · ${{.Total}} · {{.Via}} · {{.Status}} · {{.Kind}} {{if .Renew}}renew{{else}}prepaid{{end}}
+  {{if eq .Status "pending"}}{{if eq .Via "crypto"}}
+  <form method="post" style="display:inline"><button class="btn" name="confirm" value="{{.ID}}">Confirm crypto</button></form>
+  {{end}}{{end}}
+</li>
+{{end}}
+</ul>
+</div>
+{{template "foot" .}}

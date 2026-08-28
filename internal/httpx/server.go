@@ -21,7 +21,6 @@ import (
 	"github.com/PacificDailyTimes/pdt-news/internal/config"
 	"github.com/PacificDailyTimes/pdt-news/internal/db"
 	"github.com/PacificDailyTimes/pdt-news/internal/mailer"
-	"github.com/PacificDailyTimes/pdt-news/internal/tax"
 	"github.com/PacificDailyTimes/pdt-news/internal/totp"
 	"github.com/PacificDailyTimes/pdt-news/internal/wallet"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -95,10 +94,15 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/dash/feeds", s.agg)
 	s.mux.HandleFunc("/dash/shop", s.dashShop)
 	s.mux.HandleFunc("/dash/wallet", s.dashWallet)
+	s.mux.HandleFunc("/dash/pay", s.dashPay)
 	s.mux.HandleFunc("/dash/security", s.security)
 	s.mux.HandleFunc("/dash/badad", s.dashBadAd)
 	s.mux.HandleFunc("/shop", s.shop)
 	s.mux.HandleFunc("/checkout", s.checkout)
+	s.mux.HandleFunc("/pay/return", s.payReturn)
+	s.mux.HandleFunc("/pay/stripe/webhook", s.payStripeWH)
+	s.mux.HandleFunc("/pay/paypal/webhook", s.payPaypalWH)
+	s.mux.HandleFunc("/pay/crypto", s.payCryptoNote)
 	s.mux.HandleFunc("/rss", s.feed("rss"))
 	s.mux.HandleFunc("/atom", s.feed("atom"))
 	s.mux.HandleFunc("/feed", s.feed("rss"))
@@ -707,7 +711,7 @@ func (s *Server) dashShop(w http.ResponseWriter, r *http.Request) {
 		kind := val(r, "kind", "physical")
 		var n any
 		var unit any
-		if kind == "subscription" {
+		if kind == "subscription" || kind == "membership" {
 			n = atoi(val(r, "interval_n", "1"))
 			unit = val(r, "interval_unit", "month")
 		}
@@ -795,72 +799,6 @@ func (s *Server) shop(w http.ResponseWriter, r *http.Request) {
 	rows.Close()
 	p.Data = list
 	s.render(w, "shop.html", p)
-}
-
-func (s *Server) checkout(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/shop", http.StatusSeeOther)
-		return
-	}
-	_ = r.ParseForm()
-	pool, _ := s.db()
-	pid, _ := strconv.ParseInt(r.FormValue("product_id"), 10, 64)
-	var title string
-	var price int
-	var kind string
-	var n *int
-	var unit *string
-	err := pool.QueryRow(context.Background(),
-		`SELECT title,price_cents,kind,interval_n,interval_unit FROM products WHERE id=$1`, pid).
-		Scan(&title, &price, &kind, &n, &unit)
-	if err != nil {
-		http.Error(w, "product", 404)
-		return
-	}
-	st := r.FormValue("state")
-	zip := r.FormValue("zip")
-	taxc := tax.Cents(price, "US", st, zip)
-	email := r.FormValue("email")
-	var uid *int64
-	if u := s.user(r); u != nil {
-		uid = &u.ID
-		email = u.Email
-	}
-	var oid int64
-	_ = pool.QueryRow(context.Background(),
-		`INSERT INTO orders(user_id,email,total_cents,tax_cents,status,dest_state,dest_zip,pay_via)
-		 VALUES($1,$2,$3,$4,'paid',$5,$6,$7) RETURNING id`,
-		uid, email, price+taxc, taxc, st, zip, val(r, "pay_via", "invoice")).Scan(&oid)
-	_, _ = pool.Exec(context.Background(),
-		`INSERT INTO order_items(order_id,product_id,title,qty,price_cents) VALUES($1,$2,$3,1,$4)`,
-		oid, pid, title, price)
-	num := fmt.Sprintf("INV-%d", oid)
-	pdf := simplePDF(num, title, price, taxc)
-	pdfPath := filepath.Join(s.root, "var", "invoices")
-	os.MkdirAll(pdfPath, 0755)
-	fn := filepath.Join(pdfPath, num+".pdf")
-	_ = os.WriteFile(fn, pdf, 0644)
-	_, _ = pool.Exec(context.Background(), `INSERT INTO invoices(order_id,number,pdf_path) VALUES($1,$2,$3)`, oid, num, fn)
-	if kind == "subscription" && uid != nil && n != nil && unit != nil {
-		start := r.FormValue("start_on")
-		if start == "" {
-			start = time.Now().Format("2006-01-02")
-		}
-		skip := nullStr(r.FormValue("skip_until"))
-		_, _ = pool.Exec(context.Background(),
-			`INSERT INTO subscriptions(user_id,product_id,interval_n,interval_unit,start_on,skip_until,next_on)
-			 VALUES($1,$2,$3,$4,$5,$6,$5::date)`, *uid, pid, *n, *unit, start, skip)
-	}
-	if uid != nil {
-		_, _ = pool.Exec(context.Background(),
-			`INSERT INTO entitlements(user_id,product_id,source) VALUES($1,$2,'purchase') ON CONFLICT DO NOTHING`, *uid, pid)
-	}
-	if email != "" {
-		_ = mailer.SendPDF(s.cfg, email, "Invoice "+num, "Thank you.\n\nTotal: $"+fmt.Sprintf("%.2f", float64(price+taxc)/100)+"\n", pdf, num+".pdf")
-	}
-	p := s.base(r, "Receipt")
-	p.Flash = "Order " + num + " recorded. Invoice emailed if mail is on."
-	s.render(w, "receipt.html", p)
 }
 
 func simplePDF(num, title string, price, taxc int) []byte {
