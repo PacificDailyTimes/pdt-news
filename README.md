@@ -58,7 +58,8 @@ A membership can sit on a landing column next to a product. Same checkout.
 
 ## Calendar
 
-Site-wide word: **appointment** or **reservation**. Slot size + weekday windows. Busy time from a Google/iCal/CalDAV feed (paste the secret iCal URL). Bookings export `/cal/{slug}.ics`. Tiers and optional payment on the book.
+Site-wide word: **appointment** or **reservation**. Slot size + weekday windows. Busy time from a Google/iCal feed **or** a remote CalDAV collection (Fastmail, Nextcloud, iCloud). We PUT bookings back to that collection. We do not host CalDAV. Export `/cal/{slug}.ics`. Tiers and optional payment on the book.
+
 
 ## Site
 

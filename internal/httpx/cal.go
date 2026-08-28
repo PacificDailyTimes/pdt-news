@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PacificDailyTimes/pdt-news/internal/caldav"
 	"github.com/PacificDailyTimes/pdt-news/internal/pay"
 )
 
@@ -34,10 +35,11 @@ func (s *Server) dashCal(w http.ResponseWriter, r *http.Request) {
 			win = `{"mon":[["09:00","17:00"]],"tue":[["09:00","17:00"]],"wed":[["09:00","17:00"]],"thu":[["09:00","17:00"]],"fri":[["09:00","17:00"]],"sat":[],"sun":[]}`
 		}
 		_, _ = pool.Exec(context.Background(),
-			`INSERT INTO calendars(site_id,name,slug,tz,slot_min,windows,ical_url,min_tier,word,product_id)
-			 VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10)`,
+			`INSERT INTO calendars(site_id,name,slug,tz,slot_min,windows,ical_url,caldav_url,caldav_user,caldav_pass,min_tier,word,product_id)
+			 VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13)`,
 			sid, r.FormValue("name"), slugify(val(r, "slug", r.FormValue("name"))),
 			val(r, "tz", "America/Detroit"), slot, win, nullStr(r.FormValue("ical_url")),
+			nullStr(r.FormValue("caldav_url")), nullStr(r.FormValue("caldav_user")), nullStr(r.FormValue("caldav_pass")),
 			min, val(r, "word", s.bookWord()),
 			nullInt(r.FormValue("product_id")))
 		if r.FormValue("book_word") != "" {
@@ -90,9 +92,12 @@ func (s *Server) pubCal(w http.ResponseWriter, r *http.Request, slug string) {
 	var slot, min int
 	var ical *string
 	var pid *int64
+	acc := caldav.Acc{}
 	err := pool.QueryRow(context.Background(),
-		`SELECT id,name,tz,slot_min,windows::text,ical_url,min_tier,word,product_id FROM calendars WHERE slug=$1`, slug).
-		Scan(&id, &name, &tz, &slot, &win, &ical, &min, &word, &pid)
+		`SELECT id,name,tz,slot_min,windows::text,ical_url,min_tier,word,product_id,
+		        coalesce(caldav_url,''),coalesce(caldav_user,''),coalesce(caldav_pass,'')
+		 FROM calendars WHERE slug=$1`, slug).
+		Scan(&id, &name, &tz, &slot, &win, &ical, &min, &word, &pid, &acc.URL, &acc.User, &acc.Pass)
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -100,7 +105,7 @@ func (s *Server) pubCal(w http.ResponseWriter, r *http.Request, slug string) {
 	if !s.gate(w, r, min, name) {
 		return
 	}
-	busy := s.busyTimes(id, ical)
+	busy := s.busyTimes(id, ical, acc)
 	if r.Method == http.MethodPost {
 		_ = r.ParseForm()
 		u := s.user(r)
@@ -155,6 +160,9 @@ func (s *Server) pubCal(w http.ResponseWriter, r *http.Request, slug string) {
 			}
 		}
 		_, _ = pool.Exec(context.Background(), `UPDATE bookings SET status='booked' WHERE id=$1`, bid)
+		if acc.URL != "" {
+			_ = acc.Put(fmt.Sprintf("pdt-%d", bid), start, end, name, r.FormValue("note"))
+		}
 		p := s.base(r, word)
 		s.decorate(&p, "page")
 		p.Flash = "Booked " + start.Format("Mon 2 Jan 15:04") + "."
@@ -195,7 +203,7 @@ func (s *Server) ics(w http.ResponseWriter, r *http.Request, slug string) {
 	fmt.Fprint(w, "END:VCALENDAR\r\n")
 }
 
-func (s *Server) busyTimes(calID int64, ical *string) [][2]time.Time {
+func (s *Server) busyTimes(calID int64, ical *string, acc caldav.Acc) [][2]time.Time {
 	var out [][2]time.Time
 	pool, _ := s.db()
 	rows, _ := pool.Query(context.Background(),
@@ -209,6 +217,9 @@ func (s *Server) busyTimes(calID int64, ical *string) [][2]time.Time {
 	if ical != nil && *ical != "" {
 		out = append(out, fetchICS(*ical)...)
 	}
+	from := time.Now().Add(-24 * time.Hour)
+	to := time.Now().Add(60 * 24 * time.Hour)
+	out = append(out, acc.Busy(from, to)...)
 	return out
 }
 
@@ -220,53 +231,7 @@ func fetchICS(u string) [][2]time.Time {
 	}
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	return parseICS(string(b))
-}
-
-func parseICS(s string) [][2]time.Time {
-	var out [][2]time.Time
-	lines := strings.Split(strings.ReplaceAll(s, "\r\n", "\n"), "\n")
-	var start, end time.Time
-	in := false
-	for _, ln := range lines {
-		if ln == "BEGIN:VEVENT" {
-			in, start, end = true, time.Time{}, time.Time{}
-		}
-		if !in {
-			continue
-		}
-		if strings.HasPrefix(ln, "DTSTART") {
-			start = parseICSTime(ln)
-		}
-		if strings.HasPrefix(ln, "DTEND") {
-			end = parseICSTime(ln)
-		}
-		if ln == "END:VEVENT" {
-			if !start.IsZero() {
-				if end.IsZero() {
-					end = start.Add(30 * time.Minute)
-				}
-				out = append(out, [2]time.Time{start, end})
-			}
-			in = false
-		}
-	}
-	return out
-}
-
-func parseICSTime(ln string) time.Time {
-	i := strings.LastIndex(ln, ":")
-	if i < 0 {
-		return time.Time{}
-	}
-	v := strings.TrimSpace(ln[i+1:])
-	v = strings.TrimSuffix(v, "Z")
-	for _, layout := range []string{"20060102T150405", "20060102"} {
-		if t, err := time.Parse(layout, v); err == nil {
-			return t
-		}
-	}
-	return time.Time{}
+	return caldav.ParseICS(string(b))
 }
 
 func (s *Server) openSlots(winJSON string, slot int, day string, busy [][2]time.Time) []string {
