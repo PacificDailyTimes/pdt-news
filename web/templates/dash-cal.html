@@ -2,7 +2,7 @@
 <div class="dash">
 <nav class="tabs"><a href="/dash">Home</a><a href="/dash/cal">{{.BookWord}}</a></nav>
 <h1>{{.BookWord}}</h1>
-<p class="hint">Availability is a weekday window + slot size. Connect a remote calendar for busy time — Google/iCal URL, or CalDAV (Fastmail, Nextcloud, iCloud, Google CalDAV). We do not host CalDAV. Bookings export at <code>/cal/{slug}.ics</code> for anyone to subscribe, and we PUT new bookings back to the connected CalDAV collection.</p>
+<p class="hint">Same model as your phone: iOS/Android Calendar (or DAVx⁵) talks to Nextcloud/ownCloud. pdt-news talks to that <em>same</em> collection. We are another client, not a CalDAV host. Book on the site → it shows on the phone. Drag or delete on the phone → we pick it up on the next view (or Sync). Collection URL looks like <code>https://cloud.example/remote.php/dav/calendars/USER/personal/</code>. Use an app password.</p>
 <form method="post">
 <p><label>Name <input name="name" required></label>
 <label>Slug <input name="slug"></label>
@@ -19,6 +19,8 @@
 <p><label>Windows JSON <input name="windows" size="60" placeholder='{"mon":[["09:00","17:00"]],…}'></label></p>
 <p><button class="btn">Save calendar</button></p>
 </form>
-<ul class="plain">{{range .Data}}<li>{{.Name}} · {{.Slot}} min · /book/{{.Slug}} · /cal/{{.Slug}}.ics</li>{{end}}</ul>
+<ul class="plain">{{range .Data}}<li>{{.Name}} · {{.Slot}} min · /book/{{.Slug}} · /cal/{{.Slug}}.ics
+  <form method="post" style="display:inline"><input type="hidden" name="act" value="sync"><input type="hidden" name="id" value="{{.ID}}"><button class="btn ghost">Sync</button></form>
+</li>{{end}}</ul>
 </div>
 {{template "foot" .}}

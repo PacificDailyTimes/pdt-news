@@ -26,6 +26,10 @@ func (s *Server) dashCal(w http.ResponseWriter, r *http.Request) {
 	pool, _ := s.db()
 	if r.Method == http.MethodPost {
 		_ = r.ParseForm()
+		if r.FormValue("act") == "sync" {
+			s.dashCalSync(w, r)
+			return
+		}
 		var sid int64
 		_ = pool.QueryRow(context.Background(), `SELECT id FROM sites WHERE is_main=true`).Scan(&sid)
 		slot, _ := strconv.Atoi(val(r, "slot_min", "30"))
@@ -105,6 +109,7 @@ func (s *Server) pubCal(w http.ResponseWriter, r *http.Request, slug string) {
 	if !s.gate(w, r, min, name) {
 		return
 	}
+	s.caldavSync(id, acc)
 	busy := s.busyTimes(id, ical, acc)
 	if r.Method == http.MethodPost {
 		_ = r.ParseForm()
@@ -161,7 +166,17 @@ func (s *Server) pubCal(w http.ResponseWriter, r *http.Request, slug string) {
 		}
 		_, _ = pool.Exec(context.Background(), `UPDATE bookings SET status='booked' WHERE id=$1`, bid)
 		if acc.URL != "" {
-			_ = acc.Put(fmt.Sprintf("pdt-%d", bid), start, end, name, r.FormValue("note"))
+			ev, err := acc.Put(caldav.Event{
+				UID:     fmt.Sprintf("pdt-%d@pdt", bid),
+				Start:   start,
+				End:     end,
+				Summary: name,
+			})
+			if err == nil {
+				_, _ = pool.Exec(context.Background(),
+					`UPDATE bookings SET caldav_uid=$1, caldav_href=$2, caldav_etag=$3 WHERE id=$4`,
+					ev.UID, ev.Href, ev.ETag, bid)
+			}
 		}
 		p := s.base(r, word)
 		s.decorate(&p, "page")
@@ -201,6 +216,73 @@ func (s *Server) ics(w http.ResponseWriter, r *http.Request, slug string) {
 	}
 	rows.Close()
 	fmt.Fprint(w, "END:VCALENDAR\r\n")
+}
+
+func (s *Server) caldavSync(calID int64, acc caldav.Acc) {
+	if acc.URL == "" {
+		return
+	}
+	pool, err := s.db()
+	if err != nil {
+		return
+	}
+	from := time.Now().Add(-24 * time.Hour)
+	to := time.Now().Add(90 * 24 * time.Hour)
+	remote := acc.List(from, to)
+	seen := map[string]caldav.Event{}
+	for _, e := range remote {
+		if e.UID == "" {
+			continue
+		}
+		seen[e.UID] = e
+		bid := pdtBookingID(e.UID)
+		if bid < 1 {
+			continue
+		}
+		_, _ = pool.Exec(context.Background(),
+			`UPDATE bookings SET starts=$1, ends=$2, caldav_href=$3, caldav_etag=$4, status='booked'
+			 WHERE id=$5 AND calendar_id=$6 AND status IN ('booked','held','cancelled')`,
+			e.Start, e.End, e.Href, e.ETag, bid, calID)
+	}
+	rows, _ := pool.Query(context.Background(),
+		`SELECT id, coalesce(caldav_uid,'') FROM bookings
+		 WHERE calendar_id=$1 AND status IN ('booked','held') AND coalesce(caldav_uid,'') <> ''`, calID)
+	defer rows.Close()
+	for rows.Next() {
+		var id int64
+		var uid string
+		if rows.Scan(&id, &uid) != nil {
+			continue
+		}
+		if _, ok := seen[uid]; !ok {
+			_, _ = pool.Exec(context.Background(), `UPDATE bookings SET status='cancelled' WHERE id=$1`, id)
+		}
+	}
+}
+
+func pdtBookingID(uid string) int64 {
+	u := strings.TrimSpace(uid)
+	u = strings.TrimSuffix(u, "@pdt")
+	if !strings.HasPrefix(u, "pdt-") {
+		return 0
+	}
+	n, _ := strconv.ParseInt(strings.TrimPrefix(u, "pdt-"), 10, 64)
+	return n
+}
+
+func (s *Server) dashCalSync(w http.ResponseWriter, r *http.Request) {
+	u := s.need(w, r, "admin", "author")
+	if u == nil {
+		return
+	}
+	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+	pool, _ := s.db()
+	acc := caldav.Acc{}
+	_ = pool.QueryRow(context.Background(),
+		`SELECT coalesce(caldav_url,''),coalesce(caldav_user,''),coalesce(caldav_pass,'') FROM calendars WHERE id=$1`, id).
+		Scan(&acc.URL, &acc.User, &acc.Pass)
+	s.caldavSync(id, acc)
+	http.Redirect(w, r, "/dash/cal", http.StatusSeeOther)
 }
 
 func (s *Server) busyTimes(calID int64, ical *string, acc caldav.Acc) [][2]time.Time {
