@@ -1,8 +1,14 @@
 #!/bin/bash
-# Package / tarball installer. Passwordless by default.
-#   sudo bash contrib/pdt-install
-#   sudo bash contrib/pdt-install --db-name pdt --db-user pdt --db-pass secret --url https://example.tld
+# pdt-news installer. Same script in the package trees and in the app contrib/.
+# Passwordless by default (no setup_password).
+#
+# Destination is --webroot (or the commented default). Interactive does not ask for it.
+# Verb: --webroot /srv/www/vapps/pdtnews.DOMAIN --config /opt/verb/conf/vapps/pdtnews.DOMAIN.config --nginx-server-name DOMAIN
+#
+#   sudo bash pdt-install
+#   sudo bash pdt-install --db-name pdt --db-user pdt --db-pass secret --url https://example.tld --mode network
 set -euo pipefail
+
 DB_NAME=pdt
 DB_USER=pdt
 DB_PASS=
@@ -13,7 +19,9 @@ NGINX_NAME=
 NGINX_LISTEN=80
 WEBROOT=/srv/www/pdt
 ETC=/etc/pdt
-PASSWORDLESS=1
+CONFIG=
+PORT=9001
+INTERACTIVE=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -24,27 +32,54 @@ while [ $# -gt 0 ]; do
     --url) WEB_URL=$2; shift 2;;
     --mode) MODE=$2; shift 2;;
     --webroot) WEBROOT=$2; shift 2;;
+    --etc) ETC=$2; shift 2;;
+    --config) CONFIG=$2; shift 2;;
+    --port) PORT=$2; shift 2;;
     --nginx-server-name) NGINX_NAME=$2; shift 2;;
     --nginx-listen) NGINX_LISTEN=$2; shift 2;;
-    --interactive) PASSWORDLESS=1; shift; 
-      read -rp "Database name [$DB_NAME]: " x; DB_NAME=${x:-$DB_NAME}
-      read -rp "Database user [$DB_USER]: " x; DB_USER=${x:-$DB_USER}
-      read -rsp "Database password: " DB_PASS; echo
-      read -rp "Public URL [$WEB_URL]: " x; WEB_URL=${x:-$WEB_URL}
-      read -rp "mode single|multi [$MODE]: " x; MODE=${x:-$MODE}
-      read -rp "Nginx server_name (empty skip): " NGINX_NAME
-      ;;
+    --interactive) INTERACTIVE=1; shift;;
+    -h|--help)
+      echo "pdt-install [--webroot DIR] [--etc DIR] [--config FILE] [--db-name N] [--db-user U] [--db-pass P] [--url URL] [--mode single|network] [--nginx-server-name HOST] [--interactive]"
+      echo "  --webroot is a flag/default only. Interactive will not prompt for it."
+      echo "  Verb example: pdt-install --webroot /srv/www/vapps/pdtnews.inkisaverb.com --nginx-server-name inkisaverb.com --url https://inkisaverb.com"
+      exit 0;;
     *) echo "unknown $1"; exit 1;;
   esac
 done
 
-mkdir -p "$WEBROOT" "$ETC/wallet" /var/lib/pdt
-chmod 0700 "$ETC/wallet"
+if [ "$INTERACTIVE" = "1" ]; then
+  read -rp "Database name [$DB_NAME]: " x; DB_NAME=${x:-$DB_NAME}
+  read -rp "Database user [$DB_USER]: " x; DB_USER=${x:-$DB_USER}
+  read -rsp "Database password: " DB_PASS; echo
+  read -rp "Public URL [$WEB_URL]: " x; WEB_URL=${x:-$WEB_URL}
+  read -rp "mode single|network [$MODE]: " x; MODE=${x:-$MODE}
+  read -rp "Nginx server_name (empty skip): " NGINX_NAME
+fi
 
-if [ ! -f "$ETC/config" ]; then
-  cat > "$ETC/config" <<EOF
+[ -n "$CONFIG" ] || CONFIG="$ETC/config"
+HERE=$(cd "$(dirname "$0")" && pwd)
+if [ -d "$HERE/../web" ]; then
+  APP_ROOT=$(cd "$HERE/.." && pwd)
+elif [ -d "$HERE/web" ]; then
+  APP_ROOT=$HERE
+elif [ -d /usr/share/pdt/web ]; then
+  APP_ROOT=/usr/share/pdt
+else
+  APP_ROOT=$HERE
+fi
+
+mkdir -p "$WEBROOT" "$ETC/wallet" /var/lib/pdt
+chmod 0700 "$ETC/wallet" 2>/dev/null || true
+if [ "$WEBROOT" != "$APP_ROOT" ]; then
+  mkdir -p "$WEBROOT"
+  if [ -d "$APP_ROOT/web" ]; then cp -a "$APP_ROOT/web" "$WEBROOT/"; fi
+  if [ -d "$APP_ROOT/sql" ]; then cp -a "$APP_ROOT/sql" "$WEBROOT/"; fi
+fi
+
+if [ ! -f "$CONFIG" ]; then
+  cat > "$CONFIG" <<EOF
 web_bind=127.0.0.1
-web_port=9001
+web_port=$PORT
 web_url=$WEB_URL
 db_host=$DB_HOST
 db_port=5432
@@ -54,28 +89,82 @@ db_pass=$DB_PASS
 mode=$MODE
 mail_transport=off
 theme=masthead
-wallet_dir=/etc/pdt/wallet
+wallet_dir=$ETC/wallet
+# webroot=$WEBROOT
+# Verb destination example:
+#   --webroot /srv/www/vapps/pdtnews.example.tld
 # setup_password=
 # setup_password_hash=
 EOF
-  chmod 0640 "$ETC/config"
+  chmod 0640 "$CONFIG"
 fi
-
-ln -sfn "$ETC/config" "$WEBROOT/config"
+mkdir -p "$(dirname "$WEBROOT/config")"
+ln -sfn "$CONFIG" "$WEBROOT/config"
+ln -sfn "$CONFIG" "$ETC/config" 2>/dev/null || true
 
 if command -v psql >/dev/null && [ -n "$DB_PASS" ]; then
   su - postgres -c "psql -c \"CREATE USER $DB_USER WITH PASSWORD '$DB_PASS';\"" 2>/dev/null || true
   su - postgres -c "psql -c \"CREATE DATABASE $DB_NAME OWNER $DB_USER;\"" 2>/dev/null || true
+  if [ -f "$APP_ROOT/sql/schema.sql" ]; then
+    PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" -f "$APP_ROOT/sql/schema.sql" 2>/dev/null || true
+  fi
 fi
 
-if [ -n "$NGINX_NAME" ]; then
+UNIT_SRC=""
+for c in "$HERE/pdt.service" "$APP_ROOT/contrib/pdt.service" /usr/lib/systemd/system/pdt.service; do
+  [ -f "$c" ] && UNIT_SRC=$c && break
+done
+NGINX_SRC=""
+for c in "$HERE/pdt.conf" "$HERE/nginx/pdt.conf" "$APP_ROOT/contrib/nginx/pdt.conf" /usr/share/pdt/nginx/pdt.conf; do
+  [ -f "$c" ] && NGINX_SRC=$c && break
+done
+
+if [ -n "$NGINX_NAME" ] && [ -n "$NGINX_SRC" ]; then
   conf=/etc/nginx/http.d/pdt.conf
   [ -d /etc/nginx/sites-available ] && conf=/etc/nginx/sites-available/pdt
   sed -e "s/example.tld/$NGINX_NAME/g" -e "s/listen 80/listen $NGINX_LISTEN/" \
-    "$(dirname "$0")/nginx/pdt.conf" > "$conf"
+      -e "s/127.0.0.1:9001/127.0.0.1:$PORT/" "$NGINX_SRC" > "$conf"
   [ -d /etc/nginx/sites-enabled ] && ln -sfn "$conf" /etc/nginx/sites-enabled/pdt
   nginx -t && systemctl reload nginx || true
 fi
 
-echo "Config: $ETC/config"
+BIN=pdt
+if command -v pdt >/dev/null 2>&1; then
+  BIN=$(command -v pdt)
+elif [ -x "$APP_ROOT/bin/pdt" ]; then
+  BIN=$APP_ROOT/bin/pdt
+elif [ -f "$APP_ROOT/cmd/pdt/main.go" ] && command -v go >/dev/null; then
+  mkdir -p "$APP_ROOT/bin"
+  (cd "$APP_ROOT" && go build -o bin/pdt ./cmd/pdt)
+  BIN=$APP_ROOT/bin/pdt
+fi
+
+if command -v systemctl >/dev/null && [ -d /etc/systemd/system ]; then
+  RUN_USER=nobody
+  id www >/dev/null 2>&1 && RUN_USER=www
+  id www-data >/dev/null 2>&1 && RUN_USER=www-data
+  id http >/dev/null 2>&1 && RUN_USER=http
+  cat > /etc/systemd/system/pdt.service <<EOF
+[Unit]
+Description=pdt-news CMS
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=$RUN_USER
+Group=$RUN_USER
+WorkingDirectory=$WEBROOT
+ExecStart=$BIN
+Restart=on-failure
+Environment=PDT_CONFIG=$CONFIG
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  systemctl daemon-reload
+  systemctl enable --now pdt.service 2>/dev/null || true
+fi
+
+echo "Config: $CONFIG"
+echo "Webroot: $WEBROOT"
 echo "Open $WEB_URL/install  (passwordless unless you set setup_password)"

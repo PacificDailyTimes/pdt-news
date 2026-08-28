@@ -100,4 +100,4 @@ go build -o pdt ./cmd/pdt
 # open /install
 ```
 
-Packages: `pack/`. Config: `/etc/pdt/config`, symlinked from `/srv/www/pdt/config`. Nginx: `contrib/nginx/pdt.conf`.
+Packages: [pdt-news-package](https://github.com/PacificDailyTimes/pdt-news-package) (Arch/Debian/RPM). Config: `/etc/pdt/config`, symlinked from `/srv/www/pdt/config`. Nginx: `contrib/nginx/pdt.conf`. Installer: `contrib/pdt-install` (`--webroot` sets destination; interactive does not ask for it).
