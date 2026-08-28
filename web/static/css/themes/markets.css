@@ -1,0 +1,10 @@
+/* theme: markets — heavier rule, same grid. */
+:root{
+  --bg:#f7f5ee; --ink:#111; --mute:#4a463c; --rule:#222; --accent:#0a6b3c;
+  --card:#fff; --cta-bg:#0a6b3c; --cta-ink:#fff;
+  --sans:"Source Sans 3",ui-sans-serif,system-ui,sans-serif;
+  --serif:"Source Serif 4",Georgia,serif;
+}
+.theme-cta{background:var(--cta-bg);color:var(--cta-ink)}
+.theme-mark{letter-spacing:0;font-size:1.8rem}
+html[data-theme="markets"] .mast{border-bottom-width:6px}

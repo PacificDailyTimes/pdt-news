@@ -3,7 +3,9 @@
   <p class="kicker">{{index .Data "Kind"}}</p>
   <h1>{{index .Data "Title"}}</h1>
   <p class="price">${{index .Data "Price"}}</p>
+  {{if index .Data "StockLabel"}}<p class="hint">{{index .Data "StockLabel"}}</p>{{end}}
   <div class="prose">{{index .Data "Body"}}</div>
+  {{if index .Data "SoldOut"}}<p class="flash bad">Sold out.</p>{{else}}
   <form method="post" action="/cart" id="buy">
     <input type="hidden" name="act" value="add">
     <input type="hidden" name="product_id" value="{{index .Data "ID"}}">
@@ -24,7 +26,8 @@
     {{end}}
     </div>
     <p><label>Qty <input name="qty" type="number" value="1" min="1" size="3"></label>
-    <button class="btn">Add to cart</button></p>
+    <button class="btn theme-cta">Add to cart</button></p>
   </form>
+  {{end}}
 </article>
 {{template "foot" .}}

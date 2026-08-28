@@ -2,7 +2,7 @@
 <div class="dash">
 <nav class="tabs"><a href="/dash">Home</a><a href="/dash/cal">{{.BookWord}}</a></nav>
 <h1>{{.BookWord}}</h1>
-<p class="hint">Availability is a weekday window + slot size. We subtract busy time from your Google/iCal/CalDAV feed (paste the secret iCal URL — that is how Google actually shares a calendar). Bookings export at <code>/cal/{slug}.ics</code>.</p>
+<p class="hint">Availability is a weekday window + slot size. Paste the Google/iCal secret URL. We do not run a local CalDAV server. Bookings export at <code>/cal/{slug}.ics</code> for anyone to subscribe.</p>
 <form method="post">
 <p><label>Name <input name="name" required></label>
 <label>Slug <input name="slug"></label>
@@ -12,7 +12,6 @@
 <label>Site-wide word <select name="book_word"><option>appointment</option><option>reservation</option></select></label>
 <label>Min tier <input name="min_tier" value="0" size="3"></label></p>
 <p><label>iCal / Google secret URL <input name="ical_url" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"></label></p>
-<p><label>CalDAV URL <input name="caldav_url"></label></p>
 <p><label>Windows JSON <input name="windows" size="60" placeholder='{"mon":[["09:00","17:00"]],…}'></label></p>
 <p><button class="btn">Save calendar</button></p>
 </form>

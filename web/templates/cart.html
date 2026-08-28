@@ -20,7 +20,11 @@
 </tr>
 {{else}}<tr><td colspan="3">Empty.</td></tr>{{end}}
 </table>
-<p class="price">Total ${{index .Data "Total"}}</p>
+<p class="price">{{if index .Data "Coupon"}}Sub ${{index .Data "Sub"}} − coupon {{index .Data "Coupon"}} ${{index .Data "Discount"}} → {{end}}Total ${{index .Data "Total"}}</p>
+<form method="post">
+<input type="hidden" name="act" value="coupon">
+<p><label>Coupon <input name="code" value="{{index .Data "Coupon"}}"></label> <button class="btn ghost">Apply</button></p>
+</form>
 <form method="post">
 <input type="hidden" name="act" value="checkout">
 <p><label>Email <input type="email" name="email"></label>

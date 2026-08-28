@@ -10,6 +10,7 @@ import (
 
 	"github.com/PacificDailyTimes/pdt-news/internal/flags"
 	"github.com/PacificDailyTimes/pdt-news/internal/pay"
+	"github.com/PacificDailyTimes/pdt-news/internal/theme"
 )
 
 func (s *Server) setting(k string) string {
@@ -65,22 +66,26 @@ func (s *Server) decorate(p *page, place string) {
 	p.Place = place
 	p.Corners = "square"
 	p.BookWord = "appointment"
+	p.ModeDefault = "white"
 	pool, err := s.db()
 	if err != nil {
 		return
 	}
-	var corners, book, seot, seod, seoi, robots, social string
+	var corners, book, seot, seod, seoi, robots, social, mode string
 	_ = pool.QueryRow(context.Background(),
 		`SELECT coalesce(corners,'square'), coalesce(book_word,'appointment'),
 		        coalesce(seo_title,''), coalesce(seo_desc,''), coalesce(seo_image,''), coalesce(robots,'index,follow'),
-		        coalesce(social::text,'{}')
+		        coalesce(social::text,'{}'), coalesce(reader_mode,'white')
 		 FROM sites WHERE is_main=true LIMIT 1`).
-		Scan(&corners, &book, &seot, &seod, &seoi, &robots, &social)
+		Scan(&corners, &book, &seot, &seod, &seoi, &robots, &social, &mode)
 	if corners != "" {
 		p.Corners = corners
 	}
 	if book != "" {
 		p.BookWord = book
+	}
+	if mode != "" {
+		p.ModeDefault = mode
 	}
 	if p.SEOTitle == "" {
 		p.SEOTitle = seot
@@ -201,11 +206,12 @@ func (s *Server) dashSite(w http.ResponseWriter, r *http.Request) {
 				"instagram": r.FormValue("social_instagram"), "rss": r.FormValue("social_rss"),
 			})
 			_, _ = pool.Exec(context.Background(),
-				`UPDATE sites SET corners=$1, book_word=$2, social=$3::jsonb, seo_title=$4, seo_desc=$5, seo_image=$6, robots=$7, tagline=$8, description=$9
+				`UPDATE sites SET corners=$1, book_word=$2, social=$3::jsonb, seo_title=$4, seo_desc=$5, seo_image=$6, robots=$7, tagline=$8, description=$9, theme=$10, reader_mode=$11
 				 WHERE is_main=true`,
 				val(r, "corners", "square"), val(r, "book_word", "appointment"), string(social),
 				r.FormValue("seo_title"), r.FormValue("seo_desc"), r.FormValue("seo_image"),
-				val(r, "robots", "index,follow"), r.FormValue("tagline"), r.FormValue("description"))
+				val(r, "robots", "index,follow"), r.FormValue("tagline"), r.FormValue("description"),
+				val(r, "theme", "masthead"), val(r, "reader_mode", "white"))
 		case "flags":
 			fl := s.flags()
 			if !fl.Shop.Locked {
@@ -252,11 +258,12 @@ func (s *Server) dashSite(w http.ResponseWriter, r *http.Request) {
 	}
 	p := s.base(r, "Site")
 	s.decorate(&p, "")
-	var corners, book, seot, seod, seoi, robots, tagline, descr, social string
+	var corners, book, seot, seod, seoi, robots, tagline, descr, social, th, rmode string
 	_ = pool.QueryRow(context.Background(),
 		`SELECT coalesce(corners,'square'),coalesce(book_word,'appointment'),coalesce(seo_title,''),coalesce(seo_desc,''),
-		        coalesce(seo_image,''),coalesce(robots,'index,follow'),coalesce(tagline,''),coalesce(description,''),coalesce(social::text,'{}')
-		 FROM sites WHERE is_main=true`).Scan(&corners, &book, &seot, &seod, &seoi, &robots, &tagline, &descr, &social)
+		        coalesce(seo_image,''),coalesce(robots,'index,follow'),coalesce(tagline,''),coalesce(description,''),coalesce(social::text,'{}'),
+		        coalesce(theme,'masthead'), coalesce(reader_mode,'white')
+		 FROM sites WHERE is_main=true`).Scan(&corners, &book, &seot, &seod, &seoi, &robots, &tagline, &descr, &social, &th, &rmode)
 	var sm map[string]string
 	_ = json.Unmarshal([]byte(social), &sm)
 	navs := []map[string]any{}
@@ -281,10 +288,13 @@ func (s *Server) dashSite(w http.ResponseWriter, r *http.Request) {
 	p.Data = map[string]any{
 		"Corners": corners, "BookWord": book, "SEOTitle": seot, "SEODesc": seod, "SEOImage": seoi,
 		"Robots": robots, "Tagline": tagline, "Descr": descr, "Social": sm, "Navs": navs,
-		"PayLocked": s.payLocked(),
-		"Stripe":    nz(s.cfg.StripeSecret, s.setting("stripe_secret")) != "",
-		"Paypal":    nz(s.cfg.PaypalID, s.setting("paypal_client_id")) != "",
-		"Flags":     s.flags(),
+		"PayLocked":  s.payLocked(),
+		"Stripe":     nz(s.cfg.StripeSecret, s.setting("stripe_secret")) != "",
+		"Paypal":     nz(s.cfg.PaypalID, s.setting("paypal_client_id")) != "",
+		"Flags":      s.flags(),
+		"Themes":     theme.List(s.root),
+		"Theme":      th,
+		"ReaderMode": rmode,
 	}
 	s.render(w, "dash-site.html", p)
 }

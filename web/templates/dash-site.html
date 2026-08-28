@@ -8,8 +8,20 @@
 <form method="post">
 <input type="hidden" name="act" value="look">
 <p><label>Tagline <input name="tagline" value="{{index .Data "Tagline"}}"></label>
+<label>Theme <select name="theme">
+{{$th := index .Data "Theme"}}
+{{range index .Data "Themes"}}<option value="{{.}}" {{if eq . $th}}selected{{end}}>{{.}}</option>{{end}}
+</select></label>
+<label>Default paper <select name="reader_mode">
+<option value="white" {{if eq (index .Data "ReaderMode") "white"}}selected{{end}}>light</option>
+<option value="dark" {{if eq (index .Data "ReaderMode") "dark"}}selected{{end}}>dark</option>
+<option value="black" {{if eq (index .Data "ReaderMode") "black"}}selected{{end}}>black</option>
+<option value="beige" {{if eq (index .Data "ReaderMode") "beige"}}selected{{end}}>beige</option>
+<option value="gray" {{if eq (index .Data "ReaderMode") "gray"}}selected{{end}}>gray</option>
+</select></label>
 <label>Corners <select name="corners"><option value="square" {{if eq (index .Data "Corners") "square"}}selected{{end}}>square</option><option value="round" {{if eq (index .Data "Corners") "round"}}selected{{end}}>round</option></select></label>
 <label>Book word <select name="book_word"><option value="appointment" {{if eq (index .Data "BookWord") "appointment"}}selected{{end}}>appointment</option><option value="reservation" {{if eq (index .Data "BookWord") "reservation"}}selected{{end}}>reservation</option></select></label></p>
+<p class="hint">Theme files live in <code>web/static/css/themes/{name}.css</code>. Drop a file, it appears here. Only colors, fonts, and <code>.theme-cta</code> / <code>.theme-mark</code>. Layout (header, cards, thread) does not change — visitors already know how to use the site. Aa still overrides light/dark per visitor.</p>
 <p><label>Description<br><textarea name="description">{{index .Data "Descr"}}</textarea></label></p>
 <p><label>SEO title <input name="seo_title" value="{{index .Data "SEOTitle"}}"></label></p>
 <p><label>SEO description <input name="seo_desc" value="{{index .Data "SEODesc"}}"></label></p>

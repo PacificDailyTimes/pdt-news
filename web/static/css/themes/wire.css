@@ -1,0 +1,9 @@
+/* theme: wire — sans, tight, still the same mast/nav/cards. */
+:root{
+  --bg:#f4f4f4; --ink:#111; --mute:#555; --rule:#ccc; --accent:#0b57d0;
+  --card:#fff; --cta-bg:#0b57d0; --cta-ink:#fff;
+  --sans:"Source Sans 3",ui-sans-serif,system-ui,sans-serif;
+  --serif:"Source Sans 3",ui-sans-serif,system-ui,sans-serif;
+}
+.theme-cta{background:var(--cta-bg);color:var(--cta-ink);letter-spacing:.02em;text-transform:uppercase;font-size:.85rem}
+.theme-mark{font-family:var(--sans);font-weight:700;text-transform:uppercase;font-size:1.1rem;letter-spacing:.08em}

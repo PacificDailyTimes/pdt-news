@@ -1,0 +1,10 @@
+/* theme: night — dark paper. Same layout as masthead. */
+:root{
+  --bg:#121318; --ink:#e8e6e1; --mute:#9a958c; --rule:#2c2d32; --accent:#e07a7a;
+  --card:#1c1d24; --cta-bg:#e07a7a; --cta-ink:#121318;
+  --sans:"Source Sans 3",ui-sans-serif,system-ui,sans-serif;
+  --serif:"Newsreader","Source Serif 4",Georgia,serif;
+}
+.theme-cta{background:var(--cta-bg);color:var(--cta-ink)}
+.theme-mark{font-family:var(--serif);letter-spacing:-.02em}
+html[data-mode="white"]{--bg:#121318;--ink:#e8e6e1;--mute:#9a958c;--rule:#2c2d32;--card:#1c1d24}

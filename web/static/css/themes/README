@@ -1,0 +1,9 @@
+Theme files only. Filename = Dash selector.
+
+Allowed:
+  :root variables  --bg --ink --mute --rule --accent --card --sans --serif --cta-bg --cta-ink
+  .theme-cta       landing buttons
+  .theme-mark      the site title
+
+Do not change .mast .wrap .deck .card .thread layout.
+The visitor should already know how to use the page.

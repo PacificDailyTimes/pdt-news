@@ -1,0 +1,9 @@
+/* theme: masthead — paper, light. Variables + theme- hooks only. */
+:root{
+  --bg:#f6f3ea; --ink:#1a1a1a; --mute:#5c574e; --rule:#c9c2b2; --accent:#9b1d2e;
+  --card:#fffdf6; --cta-bg:#1a1a1a; --cta-ink:#f6f3ea;
+  --sans:"Source Sans 3",ui-sans-serif,system-ui,sans-serif;
+  --serif:"Newsreader","Source Serif 4",Georgia,serif;
+}
+.theme-cta{background:var(--cta-bg);color:var(--cta-ink)}
+.theme-mark{font-family:var(--serif)}

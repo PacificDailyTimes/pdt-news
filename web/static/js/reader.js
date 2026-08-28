@@ -1,7 +1,13 @@
 (function () {
   var KEY = "pdt-reader";
-  var st = { mode: "white", font: "news", size: 18, cols: 0, width: "wide" };
-  try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
+  var st = {
+    mode: document.documentElement.getAttribute("data-mode") || "white",
+    font: "news", size: 18, cols: 0, width: "wide"
+  };
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (saved) Object.assign(st, saved);
+  } catch (e) {}
 
   function apply() {
     document.documentElement.setAttribute("data-mode", st.mode);

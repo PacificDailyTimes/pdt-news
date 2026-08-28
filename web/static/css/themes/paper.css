@@ -1,0 +1,9 @@
+/* theme: paper — bright newsprint, Facebook-plain. */
+:root{
+  --bg:#fff; --ink:#050505; --mute:#65676b; --rule:#dddfe2; --accent:#1877f2;
+  --card:#fff; --cta-bg:#1877f2; --cta-ink:#fff;
+  --sans:"Source Sans 3",ui-sans-serif,system-ui,sans-serif;
+  --serif:"Source Sans 3",ui-sans-serif,system-ui,sans-serif;
+}
+.theme-cta{background:var(--cta-bg);color:var(--cta-ink);border-radius:6px}
+.theme-mark{font-family:var(--sans);font-weight:700}

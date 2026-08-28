@@ -106,6 +106,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/dash/catalog", s.dashCatalog)
 	s.mux.HandleFunc("/dash/tiers", s.dashTiers)
 	s.mux.HandleFunc("/dash/cal", s.dashCal)
+	s.mux.HandleFunc("/dash/coupons", s.dashCoupons)
 	s.mux.HandleFunc("/dash/ajax/landing", s.ajaxLanding)
 	s.mux.HandleFunc("/shop", s.shop)
 	s.mux.HandleFunc("/cart", s.cart)
@@ -179,7 +180,7 @@ type page struct {
 	Data                                           any
 	SEOTitle, SEODesc, SEOImage, Robots, Canonical string
 	HeaderNav, FooterNav, AboveNav, BelowNav       []map[string]any
-	Corners, Place, BookWord                       string
+	Corners, Place, BookWord, ModeDefault          string
 	Social                                         []map[string]string
 	Flags                                          flags.Set
 }

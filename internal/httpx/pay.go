@@ -271,6 +271,28 @@ func (s *Server) fulfill(oid int64) {
 	}
 	_, _ = pool.Exec(context.Background(),
 		`UPDATE orders SET status='paid', period_end=$1 WHERE id=$2`, end, oid)
+	items, _ := pool.Query(context.Background(),
+		`SELECT product_id, qty FROM order_items WHERE order_id=$1 AND product_id IS NOT NULL`, oid)
+	for items.Next() {
+		var pid int64
+		var qty int
+		if items.Scan(&pid, &qty) != nil {
+			continue
+		}
+		_, _ = pool.Exec(context.Background(),
+			`UPDATE products SET stock = stock - $1 WHERE id=$2 AND stock IS NOT NULL AND stock >= $1`, qty, pid)
+		if uid != nil {
+			_, _ = pool.Exec(context.Background(),
+				`INSERT INTO entitlements(user_id,product_id,source) VALUES($1,$2,$3) ON CONFLICT DO NOTHING`,
+				*uid, pid, via)
+		}
+	}
+	items.Close()
+	var coupon string
+	_ = pool.QueryRow(context.Background(), `SELECT coalesce(coupon,'') FROM orders WHERE id=$1`, oid).Scan(&coupon)
+	if coupon != "" {
+		s.bumpCoupon(coupon)
+	}
 	if uid != nil && pid != nil {
 		_, _ = pool.Exec(context.Background(),
 			`INSERT INTO entitlements(user_id,product_id,source) VALUES($1,$2,$3) ON CONFLICT DO NOTHING`,

@@ -14,7 +14,7 @@
       if (c.logo) html += '<img class="cta-logo" src="' + c.logo + '" alt="">';
       if (c.header) html += '<h2>' + c.header + '</h2>';
       if (c.text) html += '<p>' + c.text + '</p>';
-      if (c.button) html += '<p><a class="btn" href="' + (c.href || '#') + '">' + c.button + '</a></p>';
+      if (c.button) html += '<p><a class="btn theme-cta" href="' + (c.href || '#') + '">' + c.button + '</a></p>';
       html += '</section>';
     });
     html += '</div>';

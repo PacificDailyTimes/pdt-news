@@ -1,0 +1,10 @@
+/* theme: ink — black, high contrast. */
+:root{
+  --bg:#000; --ink:#f2f2f2; --mute:#aaa; --rule:#333; --accent:#ff5a5a;
+  --card:#0d0d0d; --cta-bg:#ff5a5a; --cta-ink:#000;
+  --sans:"Source Sans 3",ui-sans-serif,system-ui,sans-serif;
+  --serif:"Newsreader",Georgia,serif;
+}
+.theme-cta{background:var(--cta-bg);color:var(--cta-ink)}
+.theme-mark{font-family:var(--serif)}
+html[data-mode="white"]{--bg:#000;--ink:#f2f2f2;--mute:#aaa;--rule:#333;--card:#0d0d0d}

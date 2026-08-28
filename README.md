@@ -74,7 +74,14 @@ Stripe / PayPal: one-time **or** auto-renewing memberships/subscriptions. Crypto
 
 ## Reader
 
-`Aa`: white / black / dark / gray / beige; Newsreader / Source Serif 4 / Source Sans 3; size; newspaper columns; copy link.
+`Aa`: white / black / dark / gray / beige; Newsreader / Source Serif 4 / Source Sans 3; size; newspaper columns; copy link. Site admin picks a default light/dark; the visitor’s Aa still wins.
+
+## Themes
+
+Layout is `web/static/css/pdt.css` (mast, nav, cards, thread). A theme is one file in `web/static/css/themes/{name}.css`. Drop a file, it appears in Dash → Site. The file may only set CSS variables and the `theme-` hooks (`.theme-cta`, `.theme-mark`). No new navigation. Visitors already know header / feed / post.
+
+Shipped: `masthead`, `night`, `ink`, `paper`, `wire`, `markets`.
+
 
 ## Auth
 

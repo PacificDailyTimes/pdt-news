@@ -183,9 +183,10 @@ func (s *Server) productPage(w http.ResponseWriter, r *http.Request, slug string
 	var id int64
 	var title, body, kind, feat string
 	var price, min int
+	var stock *int
 	err := pool.QueryRow(context.Background(),
-		`SELECT id,title,body,price_cents,kind,coalesce(features::text,'[]'),min_tier FROM products WHERE slug=$1 AND active=true`, slug).
-		Scan(&id, &title, &body, &price, &kind, &feat, &min)
+		`SELECT id,title,body,price_cents,kind,coalesce(features::text,'[]'),min_tier,stock FROM products WHERE slug=$1 AND active=true`, slug).
+		Scan(&id, &title, &body, &price, &kind, &feat, &min, &stock)
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -197,8 +198,28 @@ func (s *Server) productPage(w http.ResponseWriter, r *http.Request, slug string
 	_ = json.Unmarshal([]byte(feat), &features)
 	p := s.base(r, title)
 	s.decorate(&p, "product")
-	p.Data = map[string]any{"ID": id, "Title": title, "Body": body, "Price": fmt.Sprintf("%.2f", float64(price)/100), "Kind": kind, "Features": features, "Slug": slug}
+	sold := stock != nil && *stock < 1
+	label := ""
+	if stock != nil {
+		label = strconv.Itoa(*stock) + " in stock"
+	}
+	p.Data = map[string]any{"ID": id, "Title": title, "Body": body, "Price": fmt.Sprintf("%.2f", float64(price)/100), "Kind": kind, "Features": features, "Slug": slug, "StockLabel": label, "SoldOut": sold}
 	s.render(w, "product.html", p)
+}
+
+func (s *Server) stockOK(pid int64, qty int) bool {
+	pool, err := s.db()
+	if err != nil {
+		return false
+	}
+	var stock *int
+	if pool.QueryRow(context.Background(), `SELECT stock FROM products WHERE id=$1`, pid).Scan(&stock) != nil {
+		return false
+	}
+	if stock == nil {
+		return true
+	}
+	return *stock >= qty
 }
 
 func (s *Server) deptPage(w http.ResponseWriter, r *http.Request, slug string) {
@@ -276,6 +297,10 @@ func (s *Server) cart(w http.ResponseWriter, r *http.Request) {
 			if qty < 1 {
 				qty = 1
 			}
+			if !s.stockOK(pid, qty) {
+				http.Error(w, "out of stock", 409)
+				return
+			}
 			opts, _ := json.Marshal(r.Form["opt"])
 			_, _ = pool.Exec(context.Background(),
 				`INSERT INTO carts(id) VALUES($1) ON CONFLICT DO NOTHING`, cid)
@@ -286,7 +311,15 @@ func (s *Server) cart(w http.ResponseWriter, r *http.Request) {
 			if qty < 1 {
 				qty = 1
 			}
+			var pid int64
+			_ = pool.QueryRow(context.Background(), `SELECT product_id FROM cart_items WHERE id=$1 AND cart_id=$2`, item, cid).Scan(&pid)
+			if pid > 0 && !s.stockOK(pid, qty) {
+				http.Error(w, "not enough stock", 409)
+				return
+			}
 			_, _ = pool.Exec(context.Background(), `UPDATE cart_items SET qty=$1 WHERE id=$2 AND cart_id=$3`, qty, item, cid)
+		case "coupon":
+			_, _ = pool.Exec(context.Background(), `UPDATE carts SET coupon=$1 WHERE id=$2`, strings.ToUpper(strings.TrimSpace(r.FormValue("code"))), cid)
 		case "later":
 			_, _ = pool.Exec(context.Background(), `UPDATE cart_items SET later=true WHERE id=$1 AND cart_id=$2`, item, cid)
 		case "back":
@@ -319,9 +352,12 @@ func (s *Server) cart(w http.ResponseWriter, r *http.Request) {
 		items = append(items, map[string]any{"ID": id, "Title": title, "Slug": slug, "Price": fmt.Sprintf("%.2f", float64(pc)/100), "Qty": qty, "Later": later, "Fav": fav, "Opts": opts})
 	}
 	rows.Close()
+	var coupon string
+	_ = pool.QueryRow(context.Background(), `SELECT coalesce(coupon,'') FROM carts WHERE id=$1`, cid).Scan(&coupon)
+	disc, coupon := s.applyCoupon(coupon, total)
 	p := s.base(r, "Cart")
 	s.decorate(&p, "shop")
-	p.Data = map[string]any{"Items": items, "Total": fmt.Sprintf("%.2f", float64(total)/100)}
+	p.Data = map[string]any{"Items": items, "Total": fmt.Sprintf("%.2f", float64(total-disc)/100), "Sub": fmt.Sprintf("%.2f", float64(total)/100), "Discount": fmt.Sprintf("%.2f", float64(disc)/100), "Coupon": coupon}
 	s.render(w, "cart.html", p)
 }
 
@@ -347,9 +383,21 @@ func (s *Server) cartCheckout(w http.ResponseWriter, r *http.Request, cid string
 		http.Redirect(w, r, "/cart", http.StatusSeeOther)
 		return
 	}
+	for _, l := range lines {
+		if !s.stockOK(l.pid, l.qty) {
+			http.Error(w, "out of stock: "+l.title, 409)
+			return
+		}
+	}
+	var coupon string
+	_ = pool.QueryRow(context.Background(), `SELECT coalesce(coupon,'') FROM carts WHERE id=$1`, cid).Scan(&coupon)
+	if c := r.FormValue("coupon"); c != "" {
+		coupon = c
+	}
+	disc, coupon := s.applyCoupon(coupon, total)
 	via := val(r, "pay_via", "invoice")
 	st, zip := r.FormValue("state"), r.FormValue("zip")
-	taxc := tax.Cents(total, "US", st, zip)
+	taxc := tax.Cents(total-disc, "US", st, zip)
 	email := r.FormValue("email")
 	var uid *int64
 	if u := s.user(r); u != nil {
@@ -358,16 +406,16 @@ func (s *Server) cartCheckout(w http.ResponseWriter, r *http.Request, cid string
 	}
 	var oid int64
 	_ = pool.QueryRow(context.Background(),
-		`INSERT INTO orders(user_id,email,total_cents,tax_cents,status,dest_state,dest_zip,pay_via,kind)
-		 VALUES($1,$2,$3,$4,'pending',$5,$6,$7,'cart') RETURNING id`,
-		uid, email, total+taxc, taxc, st, zip, via).Scan(&oid)
+		`INSERT INTO orders(user_id,email,total_cents,tax_cents,status,dest_state,dest_zip,pay_via,kind,coupon,discount_cents)
+		 VALUES($1,$2,$3,$4,'pending',$5,$6,$7,'cart',$8,$9) RETURNING id`,
+		uid, email, total-disc+taxc, taxc, st, zip, via, coupon, disc).Scan(&oid)
 	for _, l := range lines {
 		_, _ = pool.Exec(context.Background(),
 			`INSERT INTO order_items(order_id,product_id,title,qty,price_cents) VALUES($1,$2,$3,$4,$5)`,
 			oid, l.pid, l.title, l.qty, l.price)
 	}
 	origin := strings.TrimRight(s.cfg.URL, "/")
-	intent := pay.Intent{OrderID: strconv.FormatInt(oid, 10), AmountCents: total + taxc, Currency: "USD", Title: "Cart", Email: email,
+	intent := pay.Intent{OrderID: strconv.FormatInt(oid, 10), AmountCents: total - disc + taxc, Currency: "USD", Title: "Cart", Email: email,
 		SuccessURL: origin + "/pay/return?order=" + strconv.FormatInt(oid, 10), CancelURL: origin + "/cart"}
 	switch via {
 	case "stripe":

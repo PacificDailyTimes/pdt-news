@@ -1,5 +1,5 @@
 {{define "head"}}<!DOCTYPE html>
-<html lang="en" data-theme="{{.Theme}}" data-mode="white" data-corners="{{if .Corners}}{{.Corners}}{{else}}square{{end}}">
+<html lang="en" data-theme="{{.Theme}}" data-mode="{{if .ModeDefault}}{{.ModeDefault}}{{else}}white{{end}}" data-corners="{{if .Corners}}{{.Corners}}{{else}}square{{end}}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -13,13 +13,14 @@
 <meta property="og:type" content="website">
 {{if .Canonical}}<meta property="og:url" content="{{.Canonical}}">{{end}}
 <link rel="stylesheet" href="/static/css/pdt.css">
+<link rel="stylesheet" href="/static/css/themes/{{.Theme}}.css">
 <link rel="alternate" type="application/rss+xml" href="/rss">
 </head>
 <body class="theme-{{.Theme}}">
 <a class="skip" href="#content">Skip to content</a>
 <header class="mast">
   <div class="mast-inner">
-    <a class="mark" href="/">{{if .Site}}{{index .Site "name"}}{{else}}pdt-news{{end}}</a>
+    <a class="mark theme-mark" href="/">{{if .Site}}{{index .Site "name"}}{{else}}pdt-news{{end}}</a>
     {{if .Site}}{{if index .Site "tagline"}}<p class="kick">{{index .Site "tagline"}}</p>{{end}}{{end}}
     <nav>
       {{range .HeaderNav}}<a href="{{.Href}}" class="nav-{{.Kind}}">{{.Label}}</a>{{else}}

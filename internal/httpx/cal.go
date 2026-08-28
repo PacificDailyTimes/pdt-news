@@ -34,11 +34,11 @@ func (s *Server) dashCal(w http.ResponseWriter, r *http.Request) {
 			win = `{"mon":[["09:00","17:00"]],"tue":[["09:00","17:00"]],"wed":[["09:00","17:00"]],"thu":[["09:00","17:00"]],"fri":[["09:00","17:00"]],"sat":[],"sun":[]}`
 		}
 		_, _ = pool.Exec(context.Background(),
-			`INSERT INTO calendars(site_id,name,slug,tz,slot_min,windows,ical_url,caldav_url,min_tier,word,product_id)
-			 VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11)`,
+			`INSERT INTO calendars(site_id,name,slug,tz,slot_min,windows,ical_url,min_tier,word,product_id)
+			 VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10)`,
 			sid, r.FormValue("name"), slugify(val(r, "slug", r.FormValue("name"))),
 			val(r, "tz", "America/Detroit"), slot, win, nullStr(r.FormValue("ical_url")),
-			nullStr(r.FormValue("caldav_url")), min, val(r, "word", s.bookWord()),
+			min, val(r, "word", s.bookWord()),
 			nullInt(r.FormValue("product_id")))
 		if r.FormValue("book_word") != "" {
 			_, _ = pool.Exec(context.Background(), `UPDATE sites SET book_word=$1 WHERE is_main=true`, r.FormValue("book_word"))
@@ -88,11 +88,11 @@ func (s *Server) pubCal(w http.ResponseWriter, r *http.Request, slug string) {
 	var id int64
 	var name, tz, win, word string
 	var slot, min int
-	var ical, caldav *string
+	var ical *string
 	var pid *int64
 	err := pool.QueryRow(context.Background(),
-		`SELECT id,name,tz,slot_min,windows::text,ical_url,caldav_url,min_tier,word,product_id FROM calendars WHERE slug=$1`, slug).
-		Scan(&id, &name, &tz, &slot, &win, &ical, &caldav, &min, &word, &pid)
+		`SELECT id,name,tz,slot_min,windows::text,ical_url,min_tier,word,product_id FROM calendars WHERE slug=$1`, slug).
+		Scan(&id, &name, &tz, &slot, &win, &ical, &min, &word, &pid)
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -100,7 +100,7 @@ func (s *Server) pubCal(w http.ResponseWriter, r *http.Request, slug string) {
 	if !s.gate(w, r, min, name) {
 		return
 	}
-	busy := s.busyTimes(id, ical, caldav)
+	busy := s.busyTimes(id, ical)
 	if r.Method == http.MethodPost {
 		_ = r.ParseForm()
 		u := s.user(r)
@@ -195,7 +195,7 @@ func (s *Server) ics(w http.ResponseWriter, r *http.Request, slug string) {
 	fmt.Fprint(w, "END:VCALENDAR\r\n")
 }
 
-func (s *Server) busyTimes(calID int64, ical, caldav *string) [][2]time.Time {
+func (s *Server) busyTimes(calID int64, ical *string) [][2]time.Time {
 	var out [][2]time.Time
 	pool, _ := s.db()
 	rows, _ := pool.Query(context.Background(),
@@ -206,15 +206,8 @@ func (s *Server) busyTimes(calID int64, ical, caldav *string) [][2]time.Time {
 		out = append(out, [2]time.Time{a, b})
 	}
 	rows.Close()
-	url := ""
-	if ical != nil {
-		url = *ical
-	}
-	if url == "" && caldav != nil {
-		url = *caldav
-	}
-	if url != "" {
-		out = append(out, fetchICS(url)...)
+	if ical != nil && *ical != "" {
+		out = append(out, fetchICS(*ical)...)
 	}
 	return out
 }

@@ -1,0 +1,16 @@
+{{template "head" .}}
+<div class="dash">
+<nav class="tabs"><a href="/dash">Home</a><a href="/dash/shop">Products</a><a href="/dash/coupons">Coupons</a></nav>
+<h1>Coupons</h1>
+<form method="post">
+<p><label>Code <input name="code" required placeholder="SAVE10"></label>
+<label>Kind <select name="kind"><option value="percent">percent off</option><option value="cents">cents off</option></select></label>
+<label>Amount <input name="amount" value="10" size="5"></label>
+<label>Min cart cents <input name="min_cents" value="0" size="6"></label>
+<label>Max uses <input name="max_uses" size="4"></label>
+<label>Expires <input type="date" name="expires"></label>
+<button class="btn">Add</button></p>
+</form>
+<ul class="plain">{{range .Data}}<li><code>{{.Code}}</code> · {{.Kind}} {{.Amount}} · used {{.Used}}{{if .Max}}/{{.Max}}{{end}}</li>{{end}}</ul>
+</div>
+{{template "foot" .}}
